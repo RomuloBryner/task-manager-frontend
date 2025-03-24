@@ -24,7 +24,7 @@ interface Solicitud {
 
 export default function SolicitudDetallePage() {
   const { documentId } = useParams();
-  const [solicitud, setSolicitud] = useState<Solicitud | null>(null);
+  const [solicitud, setSolicitud] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -49,7 +49,7 @@ export default function SolicitudDetallePage() {
 
       try {
         const response = await getSolicitudById(documentId as string);
-        setSolicitud(response);
+        setSolicitud(response?.data || null); // ignore the error
       } catch (err) {
         setError("No se pudo encontrar la solicitud");
       } finally {
@@ -80,7 +80,7 @@ export default function SolicitudDetallePage() {
     };
   }, []);
 
-  console.log(solicitud);
+  console.log(solicitud?.data);
 
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">

@@ -1,7 +1,13 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337/api';
+
+export const getSolicitudes = async () => {
+  const response = await fetch(`${API_URL}/solicitudes`);
+  const data = await response.json();
+  return data;
+};
 
 export const getSolicitudById = async (documentId: string) => {
-  const response = await fetch(`${API_URL}/api/solicitudes?filters[documentId][$eq]=${documentId}`);
+  const response = await fetch(`${API_URL}/solicitudes?filters[documentId][$eq]=${documentId}`);
   const data = await response.json();
   
   if (!data.data || data.data.length === 0) {
@@ -27,4 +33,30 @@ export const getSolicitudById = async (documentId: string) => {
       referencias: attributes.solicitud?.referencias || '',
     }
   };
+};
+
+export const createSolicitud = async (solicitudData: any) => {
+  const response = await fetch(`${API_URL}/solicitudes`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      data: solicitudData,
+    }),
+  });
+  return response.json();
+};
+
+export const updateSolicitud = async (id: string, solicitudData: any) => {
+  const response = await fetch(`${API_URL}/solicitudes/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      data: solicitudData,
+    }),
+  });
+  return response.json();
 }; 
