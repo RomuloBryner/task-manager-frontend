@@ -49,7 +49,7 @@ export default function SolicitudDetallePage() {
 
       try {
         const response = await getSolicitudById(documentId as string);
-        setSolicitud(response?.data || null); // ignore the error
+        setSolicitud(response || null);
       } catch (err) {
         setError("No se pudo encontrar la solicitud");
       } finally {
@@ -120,30 +120,30 @@ export default function SolicitudDetallePage() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <span className="text-gray-600">ID de Solicitud:</span>
-            <span className="font-medium">{solicitud.documentId}</span>
+            <span className="font-medium">{solicitud?.data?.documentId}</span>
           </div>
 
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Estado:</span>
-            <span className={getEstadoBadge(solicitud.estado)}>
-              {solicitud.estado}
+            <span className={getEstadoBadge(solicitud?.data?.estado)}>
+              {solicitud?.data?.estado}
             </span>
           </div>
 
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Solicitante:</span>
-            <span className="font-medium">{solicitud.nombre}</span>
+            <span className="font-medium">{solicitud?.data?.nombre}</span>
           </div>
 
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Correo:</span>
-            <span className="font-medium">{solicitud.correo}</span>
+            <span className="font-medium">{solicitud?.data?.correo}</span>
           </div>
 
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Fecha de solicitud:</span>
             <span className="font-medium">
-              {new Date(solicitud.fecha_inicio).toLocaleString("es-DO", {
+              {new Date(solicitud?.data?.fecha_inicio).toLocaleString("es-DO", {
                 timeZone: "America/Santo_Domingo",
                 dateStyle: "long",
                 timeStyle: "short"
@@ -157,30 +157,30 @@ export default function SolicitudDetallePage() {
             <div className="space-y-4">
               <div>
                 <h3 className="font-medium text-gray-700 mb-2">Objetivo</h3>
-                <p className="text-gray-600">{solicitud.solicitud?.objetivo}</p>
+                <p className="text-gray-600">{solicitud?.data?.solicitud?.objetivo}</p>
               </div>
 
               <div>
                 <h3 className="font-medium text-gray-700 mb-2">Herramientas</h3>
-                <p className="text-gray-600">{solicitud.solicitud?.herramientas}</p>
+                <p className="text-gray-600">{solicitud?.data?.solicitud?.herramientas}</p>
               </div>
 
               <div>
                 <h3 className="font-medium text-gray-700 mb-2">Fecha límite</h3>
                 <p className="text-gray-600">
-                  {new Date(solicitud.solicitud?.fecha_limite).toLocaleDateString("es-DO")}
+                  {new Date(solicitud?.data?.solicitud?.fecha_limite).toLocaleDateString("es-DO")}
                 </p>
               </div>
 
               <div>
                 <h3 className="font-medium text-gray-700 mb-2">Responsable</h3>
-                <p className="text-gray-600">{solicitud.solicitud?.responsable}</p>
+                <p className="text-gray-600">{solicitud?.data?.solicitud?.responsable}</p>
               </div>
 
-              {solicitud.solicitud?.referencias && (
+              {solicitud?.data?.solicitud?.referencias && (
                 <div>
                   <h3 className="font-medium text-gray-700 mb-2">Referencias</h3>
-                  <p className="text-gray-600">{solicitud.solicitud?.referencias}</p>
+                  <p className="text-gray-600">{solicitud?.data?.solicitud?.referencias}</p>
                 </div>
               )}
             </div>
