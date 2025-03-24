@@ -48,8 +48,8 @@ export default function SolicitudDetallePage() {
       }
 
       try {
-        const data = await getSolicitudById(documentId as string);
-        setSolicitud(data.data);
+        const response = await getSolicitudById(documentId as string);
+        setSolicitud(response);
       } catch (err) {
         setError("No se pudo encontrar la solicitud");
       } finally {

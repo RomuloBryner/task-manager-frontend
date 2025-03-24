@@ -44,7 +44,7 @@ export function SolicitudesTable({ className }: { className?: string }) {
         ...nuevosEstados
       }));
     }
-  }, [solicitudes]);
+  }, [solicitudes, estadosLocales]);
 
   const abrirModal = (id: string, estadoActual: string) => {
     setSolicitudActual(id);

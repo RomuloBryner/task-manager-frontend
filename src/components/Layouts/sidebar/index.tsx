@@ -25,6 +25,17 @@ export function Sidebar() {
   };
 
   useEffect(() => {
+    const storedExpandedItems = localStorage.getItem('expandedItems');
+    if (storedExpandedItems) {
+      setExpandedItems(JSON.parse(storedExpandedItems));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('expandedItems', JSON.stringify(expandedItems));
+  }, [expandedItems]);
+
+  useEffect(() => {
     // Keep collapsible open, when it's subpage is active
     NAV_DATA.some((section) => {
       return section.items.some((item) => {

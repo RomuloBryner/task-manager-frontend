@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useRequest, RequestData, RequestStatus } from '@/hooks/useRequest';
-import * as api from '@/utils/api'
+import { getSolicitudes as getRequests } from '@/utils/api';
 
 const statusColors: Record<RequestStatus, string> = {
   pending: 'bg-yellow-300',
@@ -11,7 +11,7 @@ const statusColors: Record<RequestStatus, string> = {
 };
 
 const CalendarBox = () => {
-  const request = async () => await api.getRequests();
+  const request = async () => await getRequests();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [requests, setRequests] = useState<RequestData[]>([]);
 
