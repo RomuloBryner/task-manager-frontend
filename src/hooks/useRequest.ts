@@ -1,39 +1,73 @@
-// hooks/useRequest.ts
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+// hooks/useRequests.ts
+import { useEffect, useState } from "react";
+import { getRequests, updateRequest } from "@/utils/api";
 
-const API_BASE = 'http://localhost:1337'; // Reemplaza con tu base real
-
-export type RequestStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
-
-export interface RequestData {
-  id: string;
-  title: string;
-  description: string;
-  requester: any; // Puedes tipar esto si tienes el modelo de User
-  assigned_operator?: any;
-  request_status: RequestStatus;
-  scheduled_time?: string;
+interface RequestAttributes {
+  name: string;
+  status: string;
+  start_date: string;
+  documentId: string;
 }
 
-export const useRequest = (id: string) => {
-  const [request, setRequest] = useState<RequestData | null>(null);
+interface Request {
+  documentId: string;
+  responsible: string;
+  limit_date: string;
+  progress: string;
+  id: number;
+  attributes: RequestAttributes;
+}
+
+export function useRequests() {
+  const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchRequest = async () => {
+    const fetchRequests = async () => {
       try {
-        const response = await axios.get<RequestData>(`${API_BASE}/api/requests/${id}`);
-        setRequest(response.data);
+        const response = await getRequests();
+        setRequests(response.data); // Adjust if the response structure is different
       } catch (error) {
-        console.error('Error fetching request:', error);
+        console.error("Error loading requests:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRequest();
-  }, [id]);
+    fetchRequests();
+  }, []);
 
-  return { request, loading };
-};
+  const changeStatus = async (documentId: string, newStatus: string) => {
+    try {
+      await updateRequest(documentId, { statuss: newStatus });
+      setRequests((prev) =>
+        prev.map((request: any) =>
+          request?.documentId === documentId
+            ? {
+                ...request,
+                attributes: {
+                  ...request.attributes,
+                  statuss: newStatus
+                }
+              }
+            : request
+        )
+      );
+    } catch (error) {
+      console.error("Error updating status:", error);
+    }
+  };
+
+  // responsible: formData.responsible,
+  // limit_date: formData.limit_date,
+  // progress: formData.progress,
+  const nextDataStatus = async (documentId: string, responsible: string, limit_date: string, progress: string) => {
+    try {
+      await updateRequest(documentId, { responsible, limit_date, progress });
+    } catch (error) {
+      console.error("Error updating status:", error);
+    }
+  };
+
+  return { requests, loading, changeStatus, nextDataStatus };
+}

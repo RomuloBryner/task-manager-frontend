@@ -1,17 +1,18 @@
+import axios from 'axios';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337/api';
 
-export const getSolicitudes = async () => {
-  const response = await fetch(`${API_URL}/solicitudes`);
-  const data = await response.json();
-  return data;
+export const getRequests = async () => {
+  const response = await axios.get(`${API_URL}/requests`);
+  return response.data;
 };
 
-export const getSolicitudById = async (documentId: string) => {
-  const response = await fetch(`${API_URL}/solicitudes?filters[documentId][$eq]=${documentId}`);
-  const data = await response.json();
+export const getRequestById = async (documentId: string) => {
+  const response = await axios.get(`${API_URL}/requests?filters[documentId][$eq]=${documentId}`);
+  const data = response.data;
   
   if (!data.data || data.data.length === 0) {
-    throw new Error('Solicitud no encontrada');
+    throw new Error('Request not found');
   }
 
   // Transformar la respuesta para que coincida con la estructura esperada
@@ -25,38 +26,19 @@ export const getSolicitudById = async (documentId: string) => {
     estado: attributes.estado || 'Pendiente',
     fecha_inicio: attributes.fecha_inicio,
     correo: attributes.correo,
-    solicitud: {
-      objetivo: attributes.solicitud?.objetivo || '',
-      herramientas: attributes.solicitud?.herramientas || '',
-      fecha_limite: attributes.solicitud?.fecha_limite || '',
-      responsable: attributes.solicitud?.responsable || '',
-      referencias: attributes.solicitud?.referencias || '',
-    }
   };
 };
 
-export const createSolicitud = async (solicitudData: any) => {
-  const response = await fetch(`${API_URL}/solicitudes`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      data: solicitudData,
-    }),
+export const createRequest = async (requestData: any) => {
+  const response = await axios.post(`${API_URL}/requests`, {
+    data: requestData,
   });
-  return response.json();
+  return response.data;
 };
 
-export const updateSolicitud = async (id: string, solicitudData: any) => {
-  const response = await fetch(`${API_URL}/solicitudes/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      data: solicitudData,
-    }),
+export const updateRequest = async (id: string, requestData: any) => {
+  const response = await axios.put(`${API_URL}/requests/${id}`, {
+    data: requestData,
   });
-  return response.json();
+  return response.data;
 }; 

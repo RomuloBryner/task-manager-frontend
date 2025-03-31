@@ -1,16 +1,6 @@
-import { PaymentsOverview } from "@/components/Charts/payments-overview";
-import { UsedDevices } from "@/components/Charts/used-devices";
-import { WeeksProfit } from "@/components/Charts/weeks-profit";
-import { TopChannels } from "@/components/Tables/top-channels";
-import { TopChannelsSkeleton } from "@/components/Tables/top-channels/skeleton";
-import { createTimeFrameExtractor } from "@/utils/timeframe-extractor";
-import { Suspense } from "react";
-import { ChatsCard } from "./_components/chats-card";
-import { OverviewCardsGroup } from "./_components/overview-cards";
-import { OverviewCardsSkeleton } from "./_components/overview-cards/skeleton";
-import { RegionLabels } from "./_components/region-labels";
-import * as api from "@/utils/api";
-import { SolicitudesTable } from "@/components/SolicitudesTable";
+"use client";
+import { RequestsTable } from "@/components/SolicitudesTable";
+import Link from "next/link";
 
 type PropsType = {
   searchParams: Promise<{
@@ -18,24 +8,31 @@ type PropsType = {
   }>;
 };
 
-export default async function Home({ searchParams }: PropsType) {
-  const { selected_time_frame } = await searchParams;
-  const extractTimeFrame = createTimeFrameExtractor(selected_time_frame);
+export default function Home() {   
 
-  // const requests = await api.getRequests();
-  // console.log(requests);
-
-  // create a request
-  // const createRequest = await api.createRequest({
-  //   title: "Test Request",
-  //   description: "Test Description",
-  //   request_status: "pending",
-  // });
-  // console.log(createRequest);
+  const copyCreateRequestLink = () => {
+    const link = `${window.location.origin}/request`;
+    navigator.clipboard.writeText(link).then(() => {
+      alert("Link copied to clipboard!");
+    }).catch((err) => {
+      console.error("Failed to copy link:", err);
+    });
+  };
 
   return (
     <>
-        <SolicitudesTable className="col-span-12" />
+      <div className="grid grid-cols-12 gap-4">
+
+        {/* Copy Create Request Link Button */}
+        <button
+          onClick={copyCreateRequestLink}
+          className="col-span-2 bg-purple-400 text-white p-2 rounded-md"
+        >
+          Copy Create Request Link
+        </button>
+
+        <RequestsTable className="col-span-12" />
+      </div>
     </>
   );
 }

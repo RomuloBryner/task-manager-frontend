@@ -5,15 +5,21 @@ export const NAV_DATA = [
     label: "",
     items: [
       {
-        title: "Solicitudes",
+        title: "Requests",
         url: "/",
         icon: Icons.HomeIcon,
         items: [],
       },
       {
-        title: "Calendario",
+        title: "Calendar",
         url: "/calendar",
         icon: Icons.Calendar,
+        items: [],
+      },
+      {
+        title: "Edit",
+        url: "/edit",
+        icon: Icons.Pencil,
         items: [],
       },
     ],
