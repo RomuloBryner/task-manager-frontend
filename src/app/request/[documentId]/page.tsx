@@ -28,16 +28,39 @@ export default function RequestDetailPage() {
         setLoading(false);
         return;
       }
-
+    
       try {
-        const [resRequest, resFields] = await Promise.all([
+        // Obtener data actual y todos los requests
+        const [resRequest, resFields, allRequestsRes] = await Promise.all([
           getRequestById(documentId as string),
-          axios.get(process.env.NEXT_PUBLIC_API_URL + "/request-body"),
+          axios.get(`${process.env.NEXT_PUBLIC_API_URL}/request-body`),
+          axios.get(`${process.env.NEXT_PUBLIC_API_URL}/requests?pagination[pageSize]=1000`)
         ]);
-
+    
+        const requestData: any = resRequest;
         setRequest(resRequest || null);
         const fieldsStrapi = resFields?.data?.data?.request || [];
         setFields(fieldsStrapi);
+    
+        const allRequests = allRequestsRes?.data?.data;
+    
+        // Ordenar todos por start_date y luego por createdAt
+        allRequests.sort((a: any, b: any) => {
+          const aStart = new Date(a.start_date).getTime();
+          const bStart = new Date(b.start_date).getTime();
+          if (aStart === bStart) {
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          }
+          return aStart - bStart;
+        });
+
+        // Buscar el índice de esta solicitud
+        const position = allRequests.findIndex((r: any) => r.documentId === requestData.data.documentId) + 1;
+        // Guardar el ID visible
+        setRequest((prev: any) => ({
+          ...prev,
+          visibleId: position,
+        }));
       } catch (err) {
         console.error(err);
         setError("Unable to load the request");
@@ -45,6 +68,8 @@ export default function RequestDetailPage() {
         setLoading(false);
       }
     };
+    
+    
 
     fetchData();
 
@@ -96,7 +121,9 @@ export default function RequestDetailPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <span className="text-gray-600">Request ID:</span>
-            <span className="font-medium">{request.data.documentId}</span>
+            <span className="font-medium">
+              #{request.visibleId || request.data.documentId}
+            </span>
           </div>
 
           <div className="flex items-center justify-between">
@@ -163,7 +190,6 @@ export default function RequestDetailPage() {
             <div className="grid grid-cols-2 gap-6">
               {fields.map((field, index) => {
                 const value = request.data.request?.[field.name];
-                console.log(value);
 
                 // If the value is empty, null, or an empty object, do not display it
                 if (

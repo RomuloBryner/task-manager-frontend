@@ -30,3 +30,10 @@ export const deleteRequest = async (id) => {
   const response = await axios.delete(`${API_BASE}/requests/${id}`);
   return response.data;
 };
+
+export const getRequestsCountBeforeDate = async (date) => {
+  const response = await axios.get(
+    `${API_BASE}/requests/count-before-date?date=${date}`,
+  );
+  return response.data;
+};

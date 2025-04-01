@@ -42,3 +42,9 @@ export const updateRequest = async (id: string, requestData: any) => {
   });
   return response.data;
 }; 
+
+export const getRequestsCountBeforeDate = async (date: string) => {
+  const response = await axios.get(`${API_URL}/requests/count-before-date?date=${date}`);
+  return response.data;
+};
+
