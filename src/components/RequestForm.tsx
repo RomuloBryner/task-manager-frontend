@@ -1,10 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createRequest } from "@/utils/api";
 import axios from "axios";
 
-export function RequestForm({ fields }: { fields: any[] }) {
+interface Field {
+  name: string;
+  label: string;
+  type: string;
+  options?: string[];
+}
+
+export function RequestForm({ fields }: { fields: Field[] }) {
   const [form, setForm] = useState<any>({
     name: "",
     email: "",
@@ -41,7 +47,7 @@ export function RequestForm({ fields }: { fields: any[] }) {
 
     try {
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/upload`, // Asegúrate de que esta URL sea correcta
+        `${process.env.NEXT_PUBLIC_API_URL}/upload`,
         formData,
         {
           headers: {
@@ -49,7 +55,7 @@ export function RequestForm({ fields }: { fields: any[] }) {
           },
         }
       );
-      return response.data[0].url; // Ajusta esto según la estructura de la respuesta de tu API
+      return response.data[0].url;
     } catch (err) {
       console.error("Error uploading file to Strapi:", err);
       throw err;
@@ -59,12 +65,6 @@ export function RequestForm({ fields }: { fields: any[] }) {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
-
-    if (!form.name || !form.email || fields.some(f => !form.request[f.name])) {
-      setError("All fields are required");
-      setLoading(false);
-      return;
-    }
 
     const requestData: any = {};
 
@@ -118,8 +118,6 @@ export function RequestForm({ fields }: { fields: any[] }) {
       try {
         const response = await axios.get(process.env.NEXT_PUBLIC_API_URL + "/request-body");
         const { title, info } = response?.data?.data;
-        console.log(info);
-        // If info has indentation, add it
         setFormTitle(title);
         setFormInfo(info);
       } catch (error) {
@@ -129,10 +127,10 @@ export function RequestForm({ fields }: { fields: any[] }) {
 
     const fetchDepartment = async () => {
       try {
-        const response = await axios.get(process.env.NEXT_PUBLIC_API_URL + "/request-body");
+        const response = await axios.get(
+          process.env.NEXT_PUBLIC_API_URL + "/department",
+        );
         const { department } = response?.data?.data;
-        console.log(department);
-        // If info has indentation, add it
         setFormTitle(department);
       } catch (error) {
         console.error("Error loading form title:", error);
@@ -140,6 +138,7 @@ export function RequestForm({ fields }: { fields: any[] }) {
     };
 
     fetchTitle();
+    fetchDepartment();
   }, []);
 
   return (
@@ -218,7 +217,6 @@ export function RequestForm({ fields }: { fields: any[] }) {
         value={form.name}
         onChange={handleChange}
         className="w-full rounded border px-3 py-2"
-        required
       />
 
       <input
@@ -228,7 +226,6 @@ export function RequestForm({ fields }: { fields: any[] }) {
         value={form.global_id}
         onChange={handleChange}
         className="w-full rounded border px-3 py-2"
-        required
       />
 
       <input
@@ -238,7 +235,6 @@ export function RequestForm({ fields }: { fields: any[] }) {
         value={form.department}
         onChange={handleChange}
         className="w-full rounded border px-3 py-2"
-        required
       />
 
       <input
@@ -276,7 +272,7 @@ export function RequestForm({ fields }: { fields: any[] }) {
             {field.type === "select" && (
               <select {...commonProps}>
                 <option value="">Select an option</option>
-                {field.options.map((opt: string, i: number) => (
+                {field.options?.map((opt: string, i: number) => (
                   <option key={i} value={opt}>
                     {opt}
                   </option>
@@ -302,7 +298,7 @@ export function RequestForm({ fields }: { fields: any[] }) {
                 }}
                 className="w-full rounded border px-3 py-2"
               >
-                {field.options.map((opt: string, i: number) => (
+                {field.options?.map((opt: string, i: number) => (
                   <option key={i} value={opt}>
                     {opt}
                   </option>
@@ -316,9 +312,6 @@ export function RequestForm({ fields }: { fields: any[] }) {
       <button
         type="submit"
         className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-        // disabled={
-        //   !form.name || !form.email || fields.some((f) => !form.request[f.name]) || loading
-        // }
       >
         {loading ? "Submitting..." : "Submit Request"}
       </button>
