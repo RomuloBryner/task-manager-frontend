@@ -80,7 +80,6 @@ export function RequestsTable({ className }: { className?: string }) {
     setCurrentRequest(id);
     setFormData({
       responsible: request?.responsible || "",
-      limit_date: request?.limit_date || "",
       progress: request?.progress || "",
     });
     setUpdateModalOpen(true);
