@@ -14,6 +14,7 @@ export function RequestForm({ fields }: { fields: any[] }) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [requestId, setRequestId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const [formTitle, setFormTitle] = useState("");
   const [formInfo, setFormInfo] = useState("");
@@ -57,9 +58,11 @@ export function RequestForm({ fields }: { fields: any[] }) {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    setLoading(true);
 
     if (!form.name || !form.email || fields.some(f => !form.request[f.name])) {
       setError("All fields are required");
+      setLoading(false);
       return;
     }
 
@@ -74,6 +77,7 @@ export function RequestForm({ fields }: { fields: any[] }) {
           requestData[field.name] = fileUrl;
         } catch (err) {
           setError("Error uploading file");
+          setLoading(false);
           return;
         }
       } else {
@@ -104,6 +108,8 @@ export function RequestForm({ fields }: { fields: any[] }) {
     } catch (err) {
       console.error(err);
       setError("Error submitting the request");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -287,11 +293,10 @@ export function RequestForm({ fields }: { fields: any[] }) {
         type="submit"
         className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
         disabled={
-          !form.name || !form.email || fields.some((f) => !form.request[f.name])
+          !form.name || !form.email || fields.some((f) => !form.request[f.name]) || loading
         }
-        onClick={handleSubmit}
       >
-        Submit Request
+        {loading ? "Submitting..." : "Submit Request"}
       </button>
     </form>
   );
