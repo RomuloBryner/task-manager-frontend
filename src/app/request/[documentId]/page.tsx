@@ -11,6 +11,7 @@ export default function RequestDetailPage() {
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   useEffect(() => {
     // Hide layout elements
@@ -43,6 +44,10 @@ export default function RequestDetailPage() {
         setFields(fieldsStrapi);
     
         const allRequests = allRequestsRes?.data?.data;
+
+        const requestsCola = allRequests.filter((r: any) => r.statuss === "Approved");
+
+        setPendingRequests(requestsCola);
     
         // Ordenar todos por start_date y luego por createdAt
         allRequests.sort((a: any, b: any) => {
@@ -134,6 +139,11 @@ export default function RequestDetailPage() {
           </div>
 
           <div className="flex items-center justify-between">
+            <span className="text-gray-600">Requests Ahead:</span>
+            <span className="inline-block rounded-full px-4 py-2 text-sm font-semibold bg-yellow-100 text-yellow-800">{pendingRequests.length}</span>
+          </div>
+
+          <div className="flex items-center justify-between">
             <span className="text-gray-600">Requester:</span>
             <span className="font-medium">{request.data.name}</span>
           </div>
@@ -143,10 +153,10 @@ export default function RequestDetailPage() {
             <span className="font-medium">{request.data.global_id}</span>
           </div>
 
-          <div className="flex items-center justify-between">
+          {/* <div className="flex items-center justify-between">
             <span className="text-gray-600">Email:</span>
             <span className="font-medium">{request.data.email}</span>
-          </div>
+          </div> */}
 
           <div className="flex items-center justify-between">
             <span className="text-gray-600">Request Date:</span>
@@ -188,9 +198,7 @@ export default function RequestDetailPage() {
           </div>
 
           <div className="mt-6 border-t pt-6">
-            <h2 className="mb-4 text-xl font-semibold">
-              Request Details
-            </h2>
+            <h2 className="mb-4 text-xl font-semibold">Request Details</h2>
 
             <div className="grid grid-cols-2 gap-6">
               {fields.map((field, index) => {

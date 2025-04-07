@@ -118,6 +118,8 @@ export function RequestForm({ fields }: { fields: any[] }) {
       try {
         const response = await axios.get(process.env.NEXT_PUBLIC_API_URL + "/request-body");
         const { title, info } = response?.data?.data;
+        console.log(info);
+        // If info has indentation, add it
         setFormTitle(title);
         setFormInfo(info);
       } catch (error) {
