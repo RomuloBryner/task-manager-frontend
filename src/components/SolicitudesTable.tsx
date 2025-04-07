@@ -33,7 +33,6 @@ export function RequestsTable({ className }: { className?: string }) {
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [formData, setFormData] = useState({
     responsible: "",
-    limit_date: "",
     progress: "",
   });
   const [requestDetails, setRequestDetails] = useState<any>(null);
@@ -105,7 +104,6 @@ export function RequestsTable({ className }: { className?: string }) {
     setCurrentRequest(null);
     setFormData({
       responsible: "",
-      limit_date: "",
       progress: "",
     });
     setRequestDetails(null);
@@ -119,7 +117,7 @@ export function RequestsTable({ className }: { className?: string }) {
       const currentResponsible = currentRequestNow?.responsible;
       console.log(currentResponsible);
       try {
-        await nextDataStatus(currentRequest.toString(), currentRequestNow?.responsible, formData.limit_date, formData.progress);
+        await nextDataStatus(currentRequest.toString(), currentRequestNow?.responsible || "", formData.progress);
         closeModal();
       } catch (error) {
         console.error("Error updating fields:", error);
@@ -212,7 +210,6 @@ export function RequestsTable({ className }: { className?: string }) {
     const currentRequestLimitDate = requestDetails?.data?.limit_date;
     setFormData({
       responsible: requestDetails?.data?.responsible || "",
-      limit_date: currentRequestLimitDate || "",
       progress: requestDetails?.data?.progress || "",
     });
     setAcceptModalOpen(true);
@@ -220,11 +217,10 @@ export function RequestsTable({ className }: { className?: string }) {
 
   const confirmAcceptRequest = async () => {
     if (currentRequest) {
-      const limitDate = formData.limit_date;
       setLoadingStatus(true);
       try {
         await changeStatus(currentRequest.toString(), "Approved");
-        await nextDataStatus(currentRequest.toString(), formData.responsible, limitDate, formData.progress);
+        await nextDataStatus(currentRequest.toString(), formData.responsible, formData.progress);
         setLocalStatuses(prev => ({
           ...prev,
           [currentRequest]: "Approved"
