@@ -127,6 +127,18 @@ export function RequestForm({ fields }: { fields: any[] }) {
       }
     };
 
+    const fetchDepartment = async () => {
+      try {
+        const response = await axios.get(process.env.NEXT_PUBLIC_API_URL + "/request-body");
+        const { department } = response?.data?.data;
+        console.log(department);
+        // If info has indentation, add it
+        setFormTitle(department);
+      } catch (error) {
+        console.error("Error loading form title:", error);
+      }
+    };
+
     fetchTitle();
   }, []);
 
@@ -220,6 +232,16 @@ export function RequestForm({ fields }: { fields: any[] }) {
       />
 
       <input
+        type="select"
+        name="department"
+        placeholder="Department"
+        value={form.department}
+        onChange={handleChange}
+        className="w-full rounded border px-3 py-2"
+        required
+      />
+
+      <input
         type="email"
         name="email"
         placeholder="Email"
@@ -294,9 +316,9 @@ export function RequestForm({ fields }: { fields: any[] }) {
       <button
         type="submit"
         className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-        disabled={
-          !form.name || !form.email || fields.some((f) => !form.request[f.name]) || loading
-        }
+        // disabled={
+        //   !form.name || !form.email || fields.some((f) => !form.request[f.name]) || loading
+        // }
       >
         {loading ? "Submitting..." : "Submit Request"}
       </button>
