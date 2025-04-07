@@ -136,10 +136,10 @@ export function RequestsTable({ className }: { className?: string }) {
     if (currentRequest) {
       setLoadingStatus(true);
       try {
-        await changeStatus(currentRequest.toString(), "Canceled");
+        await changeStatus(currentRequest.toString(), "Cancelled");
         setLocalStatuses(prev => ({
           ...prev,
-          [currentRequest]: "Canceled"
+          [currentRequest]: "Cancelled"
         }));
         closeModal();
       } catch (error) {
@@ -210,64 +210,181 @@ export function RequestsTable({ className }: { className?: string }) {
   if (requests.length === 0) return <div className="p-4">No requests</div>;
 
   const pendingRequests = requests.filter(r => localStatuses[r.documentId] === "Pending");
-  const activeRequests = requests.filter(r => localStatuses[r.documentId] !== "Pending" && localStatuses[r.documentId] !== "Canceled");
+  const activeRequests = requests.filter(r => localStatuses[r.documentId] !== "Pending" && localStatuses[r.documentId] !== "Cancelled" && localStatuses[r.documentId] !== "Completed");
+  const completedRequests = requests.filter(r => localStatuses[r.documentId] === "Completed" || localStatuses[r.documentId] === "Cancelled");
 
   return (
-    <div className={`flex gap-4 w-full ${className}`}>
-      <div className="w-2/6 bg-white rounded p-6 shadow">
-        <h2 className="mb-1 text-xl font-bold">New Requests</h2>
-        <p className="mb-4 text-left text-md">
-          Click on requests to see more details about them.
-        </p>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Creation Date</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {pendingRequests.map((r: any) => (
-              <TableRow
-                key={r.id}
-                className="hover:bg-gray-50 cursor-pointer"
-                onClick={() => window.open(`/request/${r.documentId}`, '_blank')}
-              >
-                <TableCell>{r?.name || "No name"}</TableCell>
-                <TableCell>
-                  <span className={getStatusBadge("Pending")}>Pending</span>
-                </TableCell>
-                <TableCell>
-                  {new Date(r?.start_date).toLocaleString('en-US', {
-                    timeZone: 'America/Santo_Domingo',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </TableCell>
-                <TableCell className="text-right">
-                  <button
+    <div className={`flex flex-col gap-8 w-full`}>
+      <div className="flex gap-4 w-full">
+        <div className="w-2/6 bg-white rounded p-6 shadow">
+          <h2 className="mb-1 text-xl font-bold">New Requests</h2>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Creation Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pendingRequests.map((r: any) => (
+                <TableRow
+                  key={r.id}
+                  className="hover:bg-gray-50 cursor-pointer relative"
+                  onMouseEnter={() => {
+                    const badge = document.getElementById(`badge-${r.documentId}`);
+                    if (badge) {
+                      badge.style.display = 'block';
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    const badge = document.getElementById(`badge-${r.documentId}`);
+                    if (badge) {
+                      badge.style.display = 'none';
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyLink(r.documentId);
+                  }}
+                >
+                  <TableCell>{r?.name || "No name"}</TableCell>
+                  <TableCell>
+                    <span className={getStatusBadge("Pending")}>Pending</span>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(r?.start_date).toLocaleString('en-US', {
+                      timeZone: 'America/Santo_Domingo',
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        acceptRequest(r.documentId);
+                      }}
+                      className="rounded bg-green-500 px-3 py-1 text-white hover:bg-green-600"
+                    >
+                      Accept
+                    </button>
+                    <span
+                      id={`badge-${r.documentId}`}
+                      className="absolute top-[65%] left-[50%] translate-x-[-50%] translate-y-[-50%] mt-2 mr-2 bg-gray-800 text-white text-xs rounded px-2 py-1 hidden"
+                    >
+                      Copiar link
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        <div className="w-4/6 bg-white rounded p-6 shadow">
+          <h2 className="mb-4 text-xl font-bold">Active Requests</h2>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Creation Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {activeRequests.map((r: any) => {
+                const currentStatus = localStatuses[r.documentId] || "Approved";
+
+                return (
+                  <TableRow
+                    key={r.id}
+                    className="hover:bg-gray-50 cursor-pointer relative"
+                    onMouseEnter={() => {
+                      const badge = document.getElementById(`badge-${r.documentId}`);
+                      if (badge) {
+                        badge.style.display = 'block';
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      const badge = document.getElementById(`badge-${r.documentId}`);
+                      if (badge) {
+                        badge.style.display = 'none';
+                      }
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      acceptRequest(r.documentId);
+                      copyLink(r.documentId);
                     }}
-                    className="rounded bg-green-500 px-3 py-1 text-white hover:bg-green-600"
                   >
-                    Accept
-                  </button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                    <TableCell>{r?.name || "No name"}</TableCell>
+                    <TableCell>
+                      <span className={getStatusBadge(currentStatus)}>
+                        {currentStatus}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(r?.start_date).toLocaleString('en-US', {
+                        timeZone: 'America/Santo_Domingo',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openUpdateModal(r.documentId);
+                        }}
+                        className="rounded bg-blue-500 px-3 py-1 text-white hover:bg-blue-600"
+                      >
+                        Update progress
+                      </button>
+                      {currentStatus !== "Completed" && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openNextStepModal(r.documentId);
+                          }}
+                          className="ml-2 rounded bg-green-500 px-3 py-1 text-white hover:bg-green-600"
+                        >
+                          Next Step
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openCancelModal(r.documentId);
+                        }}
+                        className={r.statuss === "Cancelled" ? `hidden` : `ml-2 rounded bg-red-500 px-3 py-1 text-white hover:bg-red-600`}
+                      >
+                        Cancel
+                      </button>
+                      <span
+                        id={`badge-${r.documentId}`}
+                        className="absolute top-[65%] left-[50%] translate-x-[-50%] translate-y-[-50%] mt-2 mr-2 bg-gray-800 text-white text-xs rounded px-2 py-1 hidden"
+                      >
+                        Copiar link
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
-      <div className="w-4/6 bg-white rounded p-6 shadow">
-        <h2 className="mb-4 text-xl font-bold">Active Requests</h2>
+      <div className="w-full bg-white rounded p-6 shadow">
+        <h2 className="mb-4 text-xl font-bold">Completed and Cancelled Requests</h2>
         <Table>
           <TableHeader>
             <TableRow>
@@ -278,14 +395,29 @@ export function RequestsTable({ className }: { className?: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {activeRequests.map((r: any) => {
-              const currentStatus = localStatuses[r.documentId] || "Approved";
+            {completedRequests.map((r: any) => {
+              const currentStatus = localStatuses[r.documentId];
 
               return (
                 <TableRow
                   key={r.id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => window.open(`/request/${r.documentId}`, '_blank')}
+                  className="hover:bg-gray-50 cursor-pointer relative"
+                  onMouseEnter={() => {
+                    const badge = document.getElementById(`badge-${r.documentId}`);
+                    if (badge) {
+                      badge.style.display = 'block';
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    const badge = document.getElementById(`badge-${r.documentId}`);
+                    if (badge) {
+                      badge.style.display = 'none';
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyLink(r.documentId);
+                  }}
                 >
                   <TableCell>{r?.name || "No name"}</TableCell>
                   <TableCell>
@@ -304,44 +436,12 @@ export function RequestsTable({ className }: { className?: string }) {
                     })}
                   </TableCell>
                   <TableCell className="text-right">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openUpdateModal(r.documentId);
-                      }}
-                      className="rounded bg-blue-500 px-3 py-1 text-white hover:bg-blue-600"
+                    <span
+                      id={`badge-${r.documentId}`}
+                      className="absolute top-[65%] left-[50%] translate-x-[-50%] translate-y-[-50%] mt-2 mr-2 bg-gray-800 text-white text-xs rounded px-2 py-1 hidden"
                     >
-                      Update progress
-                    </button>
-                    {currentStatus !== "Completed" && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openNextStepModal(r.documentId);
-                        }}
-                        className="ml-2 rounded bg-green-500 px-3 py-1 text-white hover:bg-green-600"
-                      >
-                        Next Step
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyLink(r.documentId);
-                      }}
-                      className="ml-2 rounded bg-gray-500 px-3 py-1 text-white hover:bg-gray-600"
-                    >
-                      Copy Link
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openCancelModal(r.documentId);
-                      }}
-                      className="ml-2 rounded bg-red-500 px-3 py-1 text-white hover:bg-red-600"
-                    >
-                      Cancel
-                    </button>
+                      Copiar link
+                    </span>
                   </TableCell>
                 </TableRow>
               );

@@ -139,6 +139,11 @@ export default function RequestDetailPage() {
           </div>
 
           <div className="flex items-center justify-between">
+            <span className="text-gray-600">Global ID:</span>
+            <span className="font-medium">{request.data.global_id}</span>
+          </div>
+
+          <div className="flex items-center justify-between">
             <span className="text-gray-600">Email:</span>
             <span className="font-medium">{request.data.email}</span>
           </div>

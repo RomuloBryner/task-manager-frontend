@@ -21,14 +21,13 @@ export default function Home() {
 
   return (
     <>
-      <div className="grid grid-cols-12 gap-4">
-
+      <div className="flex flex-col items-start justify-center gap-4">
         {/* Copy Create Request Link Button */}
         <button
           onClick={copyCreateRequestLink}
-          className="col-span-2 bg-purple-400 text-white p-2 rounded-md"
+          className="col-span-2 rounded-md bg-purple-400 px-5 py-2 text-white"
         >
-          Copy Create Request Link
+          Request Link
         </button>
 
         <RequestsTable className="col-span-12" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createRequest } from "@/utils/api";
 import axios from "axios";
 
@@ -15,10 +15,13 @@ export function RequestForm({ fields }: { fields: any[] }) {
   const [error, setError] = useState("");
   const [requestId, setRequestId] = useState<string | null>(null);
 
+  const [formTitle, setFormTitle] = useState("");
+  const [formInfo, setFormInfo] = useState("");
+
   const handleChange = (e: any) => {
     const { name, value, type, files } = e.target;
 
-    if (name === "name" || name === "email") {
+    if (name === "name" || name === "email" || name === "global_id") {
       setForm((prev: any) => ({ ...prev, [name]: value }));
     } else {
       setForm((prev: any) => ({
@@ -81,6 +84,7 @@ export function RequestForm({ fields }: { fields: any[] }) {
     const dataToSend = {
       data: {
         name: form.name,
+        global_id: "123",
         email: form.email,
         statuss: "Pending",
         start_date: new Date().toISOString(),
@@ -103,37 +107,68 @@ export function RequestForm({ fields }: { fields: any[] }) {
     }
   };
 
+  useEffect(() => {
+    const fetchTitle = async () => {
+      try {
+        const response = await axios.get(process.env.NEXT_PUBLIC_API_URL + "/request-body");
+        const { title, info } = response?.data?.data;
+        setFormTitle(title);
+        setFormInfo(info);
+      } catch (error) {
+        console.error("Error loading form title:", error);
+      }
+    };
+
+    fetchTitle();
+  }, []);
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-w-7xl w-full space-y-4 rounded bg-white p-6 shadow relative"
+      className="relative w-full max-w-7xl space-y-4 rounded bg-white p-6 shadow"
     >
-      <h2 className="text-xl font-semibold">New Request</h2>
+      <h2 className="text-xl font-semibold">{formTitle}</h2>
+      <small className="text-sm text-gray-500">{formInfo}</small>
+      <hr className="my-4" />
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded">
+        <div className="rounded border border-red-200 bg-red-50 p-4">
           <p className="text-red-600">{error}</p>
         </div>
       )}
 
       {submitted && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="relative mx-4 w-full max-w-md rounded-lg bg-white p-8">
             <div className="text-center">
               <div className="mb-4">
-                <svg className="mx-auto h-12 w-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                <svg
+                  className="mx-auto h-12 w-12 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 13l4 4L19 7"
+                  ></path>
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Request sent successfully!</h3>
-              <p className="text-sm text-gray-500 mb-6">Your request has been registered and will be processed soon.</p>
+              <h3 className="mb-4 text-lg font-medium text-gray-900">
+                Request sent successfully!
+              </h3>
+              <p className="mb-6 text-sm text-gray-500">
+                Your request has been registered and will be processed soon.
+              </p>
               <div className="space-y-3">
                 {requestId && (
                   <a
                     href={`/request/${requestId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-block w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+                    className="inline-block w-full rounded bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700"
                   >
                     View request status
                   </a>
@@ -144,7 +179,7 @@ export function RequestForm({ fields }: { fields: any[] }) {
                     setSubmitted(false);
                     setRequestId(null);
                   }}
-                  className="inline-block w-full bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 transition-colors"
+                  className="inline-block w-full rounded bg-gray-200 px-4 py-2 text-gray-800 transition-colors hover:bg-gray-300"
                 >
                   Create new request
                 </button>
@@ -153,6 +188,8 @@ export function RequestForm({ fields }: { fields: any[] }) {
           </div>
         </div>
       )}
+
+      <label className="mb-1 block font-medium">Requester Information</label>
 
       <input
         type="text"
@@ -165,13 +202,22 @@ export function RequestForm({ fields }: { fields: any[] }) {
       />
 
       <input
+        type="text"
+        name="global_id"
+        placeholder="Global ID"
+        value={form.global_id}
+        onChange={handleChange}
+        className="w-full rounded border px-3 py-2"
+        required
+      />
+
+      <input
         type="email"
         name="email"
         placeholder="Email"
         value={form.email}
         onChange={handleChange}
-        className="w-full rounded border px-3 py-2"
-        required
+        className="w-full rounded border px-3 py-2 mb-6"
       />
 
       {fields.map((field, idx) => {
@@ -184,12 +230,19 @@ export function RequestForm({ fields }: { fields: any[] }) {
 
         return (
           <div key={idx}>
-            <label className="block font-medium mb-1">{field.label}</label>
+            <label className="mb-1 block font-medium">{field.label}</label>
 
             {field.type === "text" && <input type="text" {...commonProps} />}
             {field.type === "textarea" && <textarea {...commonProps} />}
             {field.type === "date" && <input type="date" {...commonProps} />}
-            {field.type === "file" && <input type="file" name={field.name} onChange={handleChange} className="w-full" />}
+            {field.type === "file" && (
+              <input
+                type="file"
+                name={field.name}
+                onChange={handleChange}
+                className="w-full"
+              />
+            )}
             {field.type === "select" && (
               <select {...commonProps}>
                 <option value="">Select an option</option>
@@ -205,7 +258,10 @@ export function RequestForm({ fields }: { fields: any[] }) {
                 name={field.name}
                 multiple
                 onChange={(e) => {
-                  const selected = Array.from(e.target.selectedOptions, (opt: any) => opt.value);
+                  const selected = Array.from(
+                    e.target.selectedOptions,
+                    (opt: any) => opt.value,
+                  );
                   setForm((prev: any) => ({
                     ...prev,
                     request: {
@@ -230,10 +286,12 @@ export function RequestForm({ fields }: { fields: any[] }) {
       <button
         type="submit"
         className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-        disabled={!form.name || !form.email || fields.some(f => !form.request[f.name])}
+        disabled={
+          !form.name || !form.email || fields.some((f) => !form.request[f.name])
+        }
         onClick={handleSubmit}
       >
-        Submit request
+        Submit Request
       </button>
     </form>
   );
