@@ -61,9 +61,9 @@ export function useRequests() {
   // responsible: formData.responsible,
   // limit_date: formData.limit_date,
   // progress: formData.progress,
-  const nextDataStatus = async (documentId: string, responsible: string, limit_date: string, progress: string) => {
+  const nextDataStatus = async (documentId: string, responsible: string, progress: string) => {
     try {
-      await updateRequest(documentId, { responsible, limit_date, progress });
+      await updateRequest(documentId, { responsible, progress });
     } catch (error) {
       console.error("Error updating status:", error);
     }

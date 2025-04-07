@@ -11,11 +11,14 @@ import {
 import { useRequests } from "@/hooks/useRequest";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getRequestById } from "@/utils/api";
+import axios from "axios";
 
 const STATUSES = [
   "Approved",
   "In Process",
   "Completed",
+  "Cancelled",
 ];
 
 export function RequestsTable({ className }: { className?: string }) {
@@ -33,6 +36,8 @@ export function RequestsTable({ className }: { className?: string }) {
     limit_date: "",
     progress: "",
   });
+  const [requestDetails, setRequestDetails] = useState<any>(null);
+  const [fields, setFields] = useState<any[]>([]);
 
   useEffect(() => {
     if (requests && requests.length > 0) {
@@ -54,6 +59,22 @@ export function RequestsTable({ className }: { className?: string }) {
       }
     }
   }, [requests]);
+
+  const fetchRequestDetails = async (documentId: string) => {
+    if (!documentId) return;
+
+    try {
+      const [resRequest, resFields] = await Promise.all([
+        getRequestById(documentId),
+        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/request-body`),
+      ]);
+
+      setRequestDetails(resRequest || null);
+      setFields(resFields?.data?.data?.request || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const openUpdateModal = (id: string) => {
     const request = requests.find((r: any) => r.documentId === id);
@@ -87,13 +108,18 @@ export function RequestsTable({ className }: { className?: string }) {
       limit_date: "",
       progress: "",
     });
+    setRequestDetails(null);
+    setFields([]);
   };
 
   const handleUpdateFields = async () => {
     if (currentRequest) {
       setLoadingStatus(true);
+      const currentRequestNow = requests.find((r: any) => r.documentId === currentRequest);
+      const currentResponsible = currentRequestNow?.responsible;
+      console.log(currentResponsible);
       try {
-        await nextDataStatus(currentRequest.toString(), formData.responsible, formData.limit_date, formData.progress);
+        await nextDataStatus(currentRequest.toString(), currentRequestNow?.responsible, formData.limit_date, formData.progress);
         closeModal();
       } catch (error) {
         console.error("Error updating fields:", error);
@@ -182,6 +208,13 @@ export function RequestsTable({ className }: { className?: string }) {
 
   const acceptRequest = async (documentId: string) => {
     setCurrentRequest(documentId);
+    await fetchRequestDetails(documentId);
+    const currentRequestLimitDate = requestDetails?.data?.limit_date;
+    setFormData({
+      responsible: requestDetails?.data?.responsible || "",
+      limit_date: currentRequestLimitDate || "",
+      progress: requestDetails?.data?.progress || "",
+    });
     setAcceptModalOpen(true);
   };
 
@@ -191,7 +224,7 @@ export function RequestsTable({ className }: { className?: string }) {
       setLoadingStatus(true);
       try {
         await changeStatus(currentRequest.toString(), "Approved");
-        await nextDataStatus(currentRequest.toString(), "", limitDate, "");
+        await nextDataStatus(currentRequest.toString(), formData.responsible, limitDate, formData.progress);
         setLocalStatuses(prev => ({
           ...prev,
           [currentRequest]: "Approved"
@@ -211,7 +244,10 @@ export function RequestsTable({ className }: { className?: string }) {
 
   const pendingRequests = requests.filter(r => localStatuses[r.documentId] === "Pending");
   const activeRequests = requests.filter(r => localStatuses[r.documentId] !== "Pending" && localStatuses[r.documentId] !== "Cancelled" && localStatuses[r.documentId] !== "Completed");
-  const completedRequests = requests.filter(r => localStatuses[r.documentId] === "Completed" || localStatuses[r.documentId] === "Cancelled");
+  const completedRequests = requests.filter(r => localStatuses[r.documentId] === "Completed");
+  const cancelledRequests = requests.filter(
+    (r) => localStatuses[r.documentId] === "Cancelled",
+  );
 
   return (
     <div className={`flex flex-col gap-8 w-full`}>
@@ -384,7 +420,7 @@ export function RequestsTable({ className }: { className?: string }) {
       </div>
 
       <div className="w-full bg-white rounded p-6 shadow">
-        <h2 className="mb-4 text-xl font-bold">Completed and Cancelled Requests</h2>
+        <h2 className="mb-4 text-xl font-bold">Completed Requests</h2>
         <Table>
           <TableHeader>
             <TableRow>
@@ -450,11 +486,78 @@ export function RequestsTable({ className }: { className?: string }) {
         </Table>
       </div>
 
+      <div className="w-full bg-white rounded p-6 shadow">
+        <h2 className="mb-4 text-xl font-bold">Cancelled Requests</h2>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Creation Date</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {cancelledRequests.map((r: any) => {
+              const currentStatus = localStatuses[r.documentId];
+
+              return (
+                <TableRow
+                  key={r.id}
+                  className="hover:bg-gray-50 cursor-pointer relative"
+                  onMouseEnter={() => {
+                    const badge = document.getElementById(`badge-${r.documentId}`);
+                    if (badge) {
+                      badge.style.display = 'block';
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    const badge = document.getElementById(`badge-${r.documentId}`);
+                    if (badge) {
+                      badge.style.display = 'none';
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyLink(r.documentId);
+                  }}
+                >
+                  <TableCell>{r?.name || "No name"}</TableCell>
+                  <TableCell>
+                    <span className={getStatusBadge(currentStatus)}>
+                      {currentStatus}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(r?.start_date).toLocaleString('en-US', {
+                      timeZone: 'America/Santo_Domingo',
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span
+                      id={`badge-${r.documentId}`}
+                      className="absolute top-[65%] left-[50%] translate-x-[-50%] translate-y-[-50%] mt-2 mr-2 bg-gray-800 text-white text-xs rounded px-2 py-1 hidden"
+                    >
+                      Copiar link
+                    </span>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
       {updateModalOpen && (
         <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded bg-white p-6 shadow-lg">
             <h3 className="mb-4 text-lg font-semibold">Update Fields</h3>
-            <div className="mb-4">
+            {/* <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Responsible</label>
               <input
                 type="text"
@@ -462,7 +565,7 @@ export function RequestsTable({ className }: { className?: string }) {
                 onChange={(e) => setFormData({ ...formData, responsible: e.target.value })}
                 className="w-full rounded border px-3 py-2"
               />
-            </div>
+            </div> */}
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Progress</label>
               <textarea
@@ -538,24 +641,69 @@ export function RequestsTable({ className }: { className?: string }) {
 
       {acceptModalOpen && (
         <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded bg-white p-6 shadow-lg text-center">
-            <h3 className="mb-4 text-lg font-semibold">Accept Request</h3>
+          <div className="w-full max-w-md rounded bg-white p-6 shadow-lg">
+            <div className="mb-12">
+              <h4 className="mb-2 text-lg font-semibold">Request Details</h4>
+              <div className="grid grid-cols-2 gap-6">
+                {fields.map((field, index) => {
+                  const value = requestDetails?.data?.request?.[field.name];
+
+                  if (
+                    value === null ||
+                    value === undefined ||
+                    (typeof value === "object" && Object.keys(value).length === 0)
+                  ) {
+                    return null;
+                  }
+
+                  return (
+                    <div key={index}>
+                      <h5 className="mb-1 font-medium text-gray-700">
+                        {field.label}
+                      </h5>
+                      {field.type === "file" && value?.includes("http") ? (
+                        <a
+                          href={value}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 underline"
+                        >
+                          View attached file
+                        </a>
+                      ) : Array.isArray(value) ? (
+                        <p className="text-gray-600">{value.join(", ")}</p>
+                      ) : (
+                        <p className="text-gray-600">{value}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Limit Date</label>
+              <label className="block text-sm font-medium mb-1">Responsible</label>
               <input
-                type="date"
-                value={formData.limit_date}
-                onChange={(e) => setFormData({ ...formData, limit_date: e.target.value })}
+                type="text"
+                value={formData.responsible}
+                onChange={(e) => setFormData({ ...formData, responsible: e.target.value })}
                 className="w-full rounded border px-3 py-2"
               />
             </div>
-            <button
-              onClick={confirmAcceptRequest}
-              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-              disabled={loadingStatus}
-            >
-              {loadingStatus ? "Accepting..." : "Next Step"}
-            </button>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeModal}
+                className="rounded bg-gray-200 px-4 py-2 hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAcceptRequest}
+                className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+                disabled={loadingStatus}
+              >
+                {loadingStatus ? "Accepting..." : "Accept"}
+              </button>
+            </div>
           </div>
         </div>
       )}
