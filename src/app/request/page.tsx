@@ -8,19 +8,6 @@ export default function RequestPage() {
   const [requestBody, setRequestBody] = useState<any>(null);
 
   useEffect(() => {
-    // Hide sidebar and header
-    const sidebar = document.querySelector('[data-component="sidebar"]') as HTMLElement;
-    const header = document.querySelector('[data-component="header"]') as HTMLElement;
-
-    if (sidebar) sidebar.style.display = 'none';
-    if (header) header.style.display = 'none';
-
-    const sidebar1 = document.querySelector('[aria-label="Main navigation"]') as HTMLElement;
-    const header1 = document.querySelector('header') as HTMLElement;
-
-    if (sidebar1) sidebar1.style.display = 'none';
-    if (header1) header1.style.display = 'none';
-
     // Load fields from Strapi
     const fetchBody = async () => {
       try {
@@ -33,12 +20,6 @@ export default function RequestPage() {
     };
 
     fetchBody();
-
-    // Restore if necessary
-    // return () => {
-    //   if (sidebar) sidebar.style.display = 'block';
-    //   if (header) header.style.display = 'block';
-    // };
   }, []);
 
   return (

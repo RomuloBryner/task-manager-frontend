@@ -1,223 +1,945 @@
-// "use client";
-// import React, { useState, useEffect } from 'react';
-// import { useRequest, RequestData, RequestStatus } from '@/hooks/useRequest';
-// import { getSolicitudes as getRequests } from '@/utils/api';
+"use client";
 
-// const statusColors: Record<RequestStatus, string> = {
-//   pending: 'bg-yellow-300',
-//   in_progress: 'bg-blue-300',
-//   completed: 'bg-green-300',
-//   cancelled: 'bg-red-300',
-// };
+import { Calendar } from "react-big-calendar";
+import {
+  parseISO,
+  format,
+  differenceInDays,
+  isBefore,
+  isAfter,
+  startOfWeek,
+  endOfWeek,
+  addDays,
+} from "date-fns";
+import { es } from "date-fns/locale";
+import { useRequests } from "@/hooks/useRequest";
+import { useMemo, useState } from "react";
+import "react-big-calendar/lib/css/react-big-calendar.css";
+import {
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Clock,
+  FileText,
+  CheckCircle,
+  User,
+  Calendar as CalendarIcon,
+  AlertTriangle,
+} from "lucide-react";
+import moment from 'moment';
+import { momentLocalizer } from 'react-big-calendar';
 
-// const CalendarBox = () => {
-//   const request = async () => await getRequests();
-//   const [currentDate, setCurrentDate] = useState(new Date());
-//   const [requests, setRequests] = useState<RequestData[]>([]);
+interface PrintRequest {
+  id: string;
+  documentId: string;
+  title: string;
+  statuss: string;
+  start: Date;
+  end: Date | null;
+  limit_date?: Date | null;
+  client?: string;
+  details?: string;
+  daysRemaining?: number | null;
+  department?: string;
+  estimated_time?: number;
+  global_id?: string;
+  email?: string;
+  expectedStartTime?: Date;
+  expectedEndTime?: Date;
+  timeConflict?: boolean;
+  createdAt?: Date;
+}
 
-//   // Simular múltiples requests para demostración
-//   // En una aplicación real, esto vendría de tu API
-//   useEffect(() => {
-//     const fetchRequests = async () => {
-//       const requests = await request();
-//       setRequests(requests);
-//     };
-//     fetchRequests();
-//   }, []);
+type CalendarView = "month" | "week" | "day" | "agenda";
 
-//   // Obtener el primer día del mes actual (para calcular el desplazamiento)
-//   const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-//   const startingDayOfWeek = firstDayOfMonth.getDay(); // 0 = Domingo, 1 = Lunes, etc.
-  
-//   // Obtener el número total de días en el mes actual
-//   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-  
-//   // Función para ir al mes anterior
-//   const goToPreviousMonth = () => {
-//     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-//   };
-  
-//   // Función para ir al mes siguiente
-//   const goToNextMonth = () => {
-//     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-//   };
-  
-//   // Obtener nombre del mes actual
-//   const monthNames = [
-//     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-//     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-//   ];
-  
-//   const currentMonthName = monthNames[currentDate.getMonth()];
-//   const currentYear = currentDate.getFullYear();
-  
-//   // Crear array con todos los días del mes
-//   const getDaysArray = () => {
-//     const daysArray = [];
-    
-//     // Agregar celdas vacías para los días antes del primer día del mes
-//     for (let i = 0; i < startingDayOfWeek; i++) {
-//       daysArray.push(null);
-//     }
-    
-//     // Agregar todos los días del mes
-//     for (let day = 1; day <= daysInMonth; day++) {
-//       daysArray.push(day);
-//     }
-    
-//     return daysArray;
-//   };
-  
-//   // Obtener requests para un día específico
-//   const getRequestsForDay = (day: number) => {
-//     if (!day) return [];
-//     return requests.filter(req => {
-//       const reqDate = req.scheduled_time ? new Date(req.scheduled_time) : null;
-//       if (!reqDate) return false;
-//       return reqDate.getDate() === day && 
-//              reqDate.getMonth() === currentDate.getMonth() &&
-//              reqDate.getFullYear() === currentDate.getFullYear();
-//     });
-//   };
-  
-//   // Renderizar una celda del día
-//   const renderDayCell = (day: number | null, index: number) => {
-//     if (day === null) {
-//       return (
-//         <td key={`empty-${index}`} className="ease relative h-20 cursor-default border border-stroke p-2 bg-gray-100 dark:bg-dark-3 md:h-25 md:p-6 xl:h-31"></td>
-//       );
-//     }
-    
-//     const dayRequests = getRequestsForDay(day);
-//     const isToday = new Date().getDate() === day && 
-//                     new Date().getMonth() === currentDate.getMonth() &&
-//                     new Date().getFullYear() === currentDate.getFullYear();
-    
-//     return (
-//       <td
-//         key={day}
-//         className={`ease relative h-20 cursor-pointer border border-stroke p-2 transition duration-500 hover:bg-gray-2 dark:border-dark-3 dark:hover:bg-dark-2 md:h-25 md:p-6 xl:h-31 ${
-//           isToday ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-//         }`}
-//       >
-//         <span className={`font-medium ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-dark dark:text-white'}`}>
-//           {day}
-//         </span>
-        
-//         <div className="mt-1 max-h-16 overflow-y-auto">
-//           {dayRequests.map(req => (
-//             <div
-//               key={req.id}
-//               className={`text-xs mb-1 p-1 rounded truncate ${statusColors[req.request_status] || ''}`}
-//               title={req.title}
-//             >
-//               {req.title}
-//             </div>
-//           ))}
-//         </div>
-//       </td>
-//     );
-//   };
-  
-//   // Agrupar los días en filas de 7 (una semana)
-//   const renderCalendarGrid = () => {
-//     const days = getDaysArray();
-//     const rows: React.ReactElement[][] = [];
-//     let cells: React.ReactElement[] = [];
-    
-//     days.forEach((day, index) => {
-//       if (index % 7 === 0 && cells.length > 0) {
-//         rows.push(cells);
-//         cells = [];
-//       }
-      
-//       cells.push(renderDayCell(day, index));
-      
-//       if (index === days.length - 1) {
-//         // Añadir celdas vacías al final si es necesario
-//         const remainingCells = 7 - cells.length;
-//         for (let i = 0; i < remainingCells; i++) {
-//           cells.push(
-//             <td key={`end-empty-${i}`} className="ease relative h-20 cursor-default border border-stroke p-2 bg-gray-100 dark:bg-dark-3 md:h-25 md:p-6 xl:h-31"></td>
-//           );
-//         }
-//         rows.push(cells);
-//       }
-//     });
-    
-//     return rows.map((row, rowIndex) => (
-//       <tr key={`row-${rowIndex}`} className="grid grid-cols-7">
-//         {row}
-//       </tr>
-//     ));
-//   };
-  
-//   return (
-//     <div className="w-full max-w-full rounded-[10px] bg-white shadow-1 dark:bg-gray-dark dark:shadow-card">
-//       {/* Controles de navegación del mes */}
-//       <div className="flex items-center justify-between p-4 border-b border-stroke dark:border-dark-3">
-//         <button
-//           onClick={goToPreviousMonth}
-//           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-2"
-//         >
-//           &larr;
-//         </button>
-        
-//         <h2 className="text-xl font-semibold text-dark dark:text-white">
-//           {currentMonthName} {currentYear}
-//         </h2>
-        
-//         <button
-//           onClick={goToNextMonth}
-//           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-2"
-//         >
-//           &rarr;
-//         </button>
-//       </div>
-      
-//       {/* Calendario */}
-//       <table className="w-full">
-//         <thead>
-//           <tr className="grid grid-cols-7 rounded-t-[10px] bg-primary text-white">
-//             {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
-//               <th
-//                 key={day}
-//                 className="flex h-15 items-center justify-center p-1 text-body-xs font-medium sm:text-base xl:p-5"
-//               >
-//                 {day}
-//               </th>
-//             ))}
-//           </tr>
-//         </thead>
-//         <tbody>
-//           {false ? (
-//             <tr>
-//               <td colSpan={7} className="h-60 text-center">
-//                 <div className="flex items-center justify-center h-full">
-//                   Cargando...
-//                 </div>
-//               </td>
-//             </tr>
-//           ) : (
-//             renderCalendarGrid()
-//           )}
-//         </tbody>
-//       </table>
-      
-//       {/* Leyenda de colores */}
-//       <div className="p-4 border-t border-stroke dark:border-dark-3">
-//         <div className="text-sm font-semibold mb-2 text-dark dark:text-white">Estados:</div>
-//         <div className="flex flex-wrap gap-2">
-//           {Object.entries(statusColors).map(([status, colorClass]) => (
-//             <div key={status} className="flex items-center">
-//               <div className={`w-4 h-4 mr-1 rounded ${colorClass}`}></div>
-//               <span className="text-xs capitalize">{status.replace('_', ' ')}</span>
-//             </div>
-//           ))}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
+export function RequestsCalendar() {
+  const { requests, loading, changeStatus, nextDataStatus } = useRequests();
+  const [selectedEvent, setSelectedEvent] = useState<PrintRequest | null>(null);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<CalendarView>("week");
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [formData, setFormData] = useState({
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    endTime: ''
+  });
 
-// export default CalendarBox;
+  // Horas laborales
+  const WORK_START_HOUR = 8;
+  const WORK_END_HOUR_WEEKDAY = 17; // 5 PM
+  const WORK_END_HOUR_FRIDAY = 16; // 4 PM
+
+  // Función para resaltar las horas laborales
+  const highlightWorkingHours = (date: Date) => {
+    const dayOfWeek = date.getDay();
+    const hour = date.getHours();
+
+    const isWorkingDay = dayOfWeek >= 1 && dayOfWeek <= 5; // Lunes a Viernes
+    const isWorkingHour =
+      dayOfWeek >= 1 && dayOfWeek <= 4
+        ? hour >= WORK_START_HOUR && hour < WORK_END_HOUR_WEEKDAY
+        : dayOfWeek === 5
+        ? hour >= WORK_START_HOUR && hour < WORK_END_HOUR_FRIDAY
+        : false;
+
+    if (isWorkingDay && isWorkingHour) {
+      return {
+        style: {
+          backgroundColor: "#eafbf0", // Color para resaltar las horas laborales
+        },
+      };
+    }
+
+    return {};
+  };
+
+  // Convertir los datos de solicitudes en eventos para el calendario
+  const events = useMemo(() => {
+    if (!requests || !Array.isArray(requests)) return [];
+
+    const today = new Date();
+
+    let mappedRequests = requests.map((req: any) => {
+      const start = req.start_date ? parseISO(req.start_date) : new Date();
+      const end = req.end_date
+        ? parseISO(req.end_date)
+        : new Date(start.getTime() + 60 * 60 * 1000);
+      const limit_date = req.limit_date ? parseISO(req.limit_date) : null;
+      const daysRemaining = limit_date
+        ? differenceInDays(limit_date, today)
+        : null;
+
+      return {
+        id: req.id,
+        documentId: req.documentId || "",
+        title: req.name || "Sin título",
+        statuss: req.statuss || "Pending",
+        start,
+        end,
+        limit_date,
+        client: req.responsible,
+        details: req.requestObject
+          ? JSON.stringify(req.requestObject)
+          : undefined,
+        daysRemaining,
+        department: req.department,
+        estimated_time: req.estimated_time || 1, // Default a 1 hora si no está especificado
+        global_id: req.global_id,
+        email: req.email,
+        createdAt: req.createdAt ? parseISO(req.createdAt) : new Date(),
+      } as PrintRequest;
+    });
+
+    mappedRequests.sort(
+      (a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0)
+    );
+
+    let currentWorkTime = new Date();
+    const currentHour = currentWorkTime.getHours();
+    const currentDay = currentWorkTime.getDay();
+
+    if (
+      currentHour < WORK_START_HOUR ||
+      (currentDay === 5 && currentHour >= WORK_END_HOUR_FRIDAY) ||
+      (currentDay !== 5 && currentHour >= WORK_END_HOUR_WEEKDAY) ||
+      currentDay === 0 ||
+      currentDay === 6
+    ) {
+      currentWorkTime.setHours(WORK_START_HOUR, 0, 0, 0);
+
+      if (currentDay === 0) {
+        currentWorkTime.setDate(currentWorkTime.getDate() + 1);
+      } else if (currentDay === 6) {
+        currentWorkTime.setDate(currentWorkTime.getDate() + 2);
+      } else if (
+        currentHour >=
+        (currentDay === 5 ? WORK_END_HOUR_FRIDAY : WORK_END_HOUR_WEEKDAY)
+      ) {
+        currentWorkTime.setDate(currentWorkTime.getDate() + 1);
+        if (currentWorkTime.getDay() === 6) {
+          currentWorkTime.setDate(currentWorkTime.getDate() + 2);
+        }
+      }
+    }
+
+    const activeRequests = mappedRequests.filter((req) =>
+      ["approved", "in progress", "pending"].includes(req.statuss.toLowerCase())
+    );
+
+    activeRequests.forEach((req) => {
+      let workStart = new Date(currentWorkTime);
+      if (workStart.getHours() < WORK_START_HOUR) {
+        workStart.setHours(WORK_START_HOUR, 0, 0, 0);
+      } else if (
+        (workStart.getDay() === 5 &&
+          workStart.getHours() >= WORK_END_HOUR_FRIDAY) ||
+        (workStart.getDay() !== 5 &&
+          workStart.getHours() >= WORK_END_HOUR_WEEKDAY) ||
+        workStart.getDay() === 0 ||
+        workStart.getDay() === 6
+      ) {
+        workStart.setDate(workStart.getDate() + 1);
+        if (workStart.getDay() === 6) {
+          workStart.setDate(workStart.getDate() + 2);
+        } else if (workStart.getDay() === 0) {
+          workStart.setDate(workStart.getDate() + 1);
+        }
+        workStart.setHours(WORK_START_HOUR, 0, 0, 0);
+      }
+
+      req.expectedStartTime = new Date(workStart);
+
+      const totalHours = req.estimated_time || 1;
+      const workHoursPerDay =
+        workStart.getDay() === 5
+          ? WORK_END_HOUR_FRIDAY - WORK_START_HOUR
+          : WORK_END_HOUR_WEEKDAY - WORK_START_HOUR;
+
+      const fullDays = Math.floor(totalHours / workHoursPerDay);
+      const remainingHours = totalHours % workHoursPerDay;
+
+      let expectedEndTime = new Date(workStart);
+
+      if (fullDays > 0) {
+        for (let i = 0; i < fullDays; i++) {
+          expectedEndTime.setDate(expectedEndTime.getDate() + 1);
+          if (expectedEndTime.getDay() === 6) {
+            expectedEndTime.setDate(expectedEndTime.getDate() + 2);
+          } else if (expectedEndTime.getDay() === 0) {
+            expectedEndTime.setDate(expectedEndTime.getDate() + 1);
+          }
+        }
+      }
+
+      let endHour = expectedEndTime.getHours() + remainingHours;
+      const workEndHour =
+        expectedEndTime.getDay() === 5
+          ? WORK_END_HOUR_FRIDAY
+          : WORK_END_HOUR_WEEKDAY;
+
+      if (endHour >= workEndHour) {
+        expectedEndTime.setDate(expectedEndTime.getDate() + 1);
+        if (expectedEndTime.getDay() === 6) {
+          expectedEndTime.setDate(expectedEndTime.getDate() + 2);
+        } else if (expectedEndTime.getDay() === 0) {
+          expectedEndTime.setDate(expectedEndTime.getDate() + 1);
+        }
+        expectedEndTime.setHours(
+          WORK_START_HOUR + (endHour - workEndHour),
+          expectedEndTime.getMinutes(),
+          0,
+          0
+        );
+      } else {
+        expectedEndTime.setHours(endHour, expectedEndTime.getMinutes(), 0, 0);
+      }
+
+      req.expectedEndTime = new Date(expectedEndTime);
+
+      if (req.limit_date && isAfter(req.expectedEndTime, req.limit_date)) {
+        req.timeConflict = true;
+      }
+
+      currentWorkTime = new Date(expectedEndTime);
+    });
+
+    return mappedRequests;
+  }, [requests]);
+
+  const groupedByDeadline = useMemo(() => {
+    if (!events.length) return [];
+
+    const activeEvents = events.filter(
+      (e) => e.statuss.toLowerCase() !== "approved"
+    );
+
+    return activeEvents
+      .sort((a, b) => {
+        if (!a.limit_date || !b.limit_date) return 0;
+        return a.limit_date.getTime() - b.limit_date.getTime();
+      })
+      .slice(0, 5);
+  }, [events]);
+
+  const workQueue = useMemo(() => {
+    if (!events.length) return [];
+
+    const activeEvents = events.filter((e) =>
+      ["approved", "in progress", "pending"].includes(e.statuss.toLowerCase())
+    );
+
+    return activeEvents
+      .sort((a, b) => {
+        if (!a.expectedStartTime || !b.expectedStartTime) return 0;
+        return a.expectedStartTime.getTime() - b.expectedStartTime.getTime();
+      })
+      .slice(0, 5);
+  }, [events]);
+
+  const getEventColor = (event: PrintRequest) => {
+    if (event.timeConflict) {
+      return { bg: "#fef2f2", border: "#dc2626" };
+    }
+    if (!event.daysRemaining && event.daysRemaining !== 0) {
+      return { bg: "#f3f4f6", border: "#9ca3af" };
+    }
+    if (event.daysRemaining < 0) {
+      return { bg: "#fef2f2", border: "#ef4444" };
+    }
+    if (event.daysRemaining === 0) {
+      return { bg: "#fef2f2", border: "#f97316" };
+    }
+    if (event.daysRemaining <= 2) {
+      return { bg: "#fff7ed", border: "#f97316" };
+    }
+    if (event.daysRemaining <= 4) {
+      return { bg: "#fefce8", border: "#eab308" };
+    }
+    return { bg: "#f0f9ff", border: "#3b82f6" };
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "pending":
+        return (
+          <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
+            Pendiente
+          </span>
+        );
+      case "approved":
+        return (
+          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">
+            Aprobado
+          </span>
+        );
+      case "completed":
+        return (
+          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800">
+            Completado
+          </span>
+        );
+      case "cancelled":
+        return (
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-800">
+            Cancelado
+          </span>
+        );
+      case "in progress":
+        return (
+          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-800">
+            En progreso
+          </span>
+        );
+      default:
+        return (
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-800">
+            {status}
+          </span>
+        );
+    }
+  };
+
+  const eventStyleGetter = (event: PrintRequest) => {
+    const colors = getEventColor(event);
+    return {
+      style: {
+        backgroundColor: colors.bg,
+        borderLeft: `3px solid ${colors.border}`,
+        color: "#1f2937",
+        borderRadius: "4px",
+        padding: "2px 8px",
+        fontSize: "13px",
+      },
+    };
+  };
+
+  const CustomToolbar = ({ date, onNavigate, view, onView }: any) => (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <div className="flex rounded-lg bg-gray-100 p-1">
+          <button
+            onClick={() => onNavigate("PREV")}
+            className="rounded-lg p-1.5 hover:bg-gray-200"
+            aria-label="Anterior"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => {
+              onNavigate("TODAY");
+              setCurrentDate(new Date());
+            }}
+            className="rounded-lg px-3 py-1.5 text-sm hover:bg-gray-200"
+          >
+            Hoy
+          </button>
+          <button
+            onClick={() => onNavigate("NEXT")}
+            className="rounded-lg p-1.5 hover:bg-gray-200"
+            aria-label="Siguiente"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        <h2 className="ml-1 hidden text-lg font-medium text-gray-800 sm:block">
+          {view === "month"
+            ? format(date, "MMMM yyyy")
+            : view === "week"
+            ? `${format(startOfWeek(date), "d MMM")} - ${format(
+                endOfWeek(date),
+                "d MMM"
+              )}`
+            : format(date, "EEEE, d MMMM")}
+        </h2>
+      </div>
+
+      <div className="flex gap-1">
+        <button
+          onClick={() => onView("month")}
+          className={`rounded-lg px-3 py-1.5 text-sm ${
+            view === "month" ? "bg-blue-600 text-white" : "bg-gray-100 hover:bg-gray-200"
+          }`}
+        >
+          Mes
+        </button>
+        <button
+          onClick={() => onView("week")}
+          className={`rounded-lg px-3 py-1.5 text-sm ${
+            view === "week" ? "bg-blue-600 text-white" : "bg-gray-100 hover:bg-gray-200"
+          }`}
+        >
+          Semana
+        </button>
+        <button
+          onClick={() => onView("day")}
+          className={`rounded-lg px-3 py-1.5 text-sm ${
+            view === "day" ? "bg-blue-600 text-white" : "bg-gray-100 hover:bg-gray-200"
+          }`}
+        >
+          Día
+        </button>
+        <button
+          onClick={() => onView("agenda")}
+          className={`rounded-lg px-3 py-1.5 text-sm ${
+            view === "agenda" ? "bg-blue-600 text-white" : "bg-gray-100 hover:bg-gray-200"
+          }`}
+        >
+          Lista
+        </button>
+      </div>
+    </div>
+  );
+
+  const EventAgenda = ({ event }: { event: PrintRequest }) => {
+    const colors = getEventColor(event);
+
+    return (
+      <div className="flex items-start border-b border-gray-100 p-2 hover:bg-gray-50">
+        <div
+          className="mr-2 mt-1 h-full w-1 self-stretch rounded-full"
+          style={{ backgroundColor: colors.border }}
+        />
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-1">
+            <h4 className="text-sm font-medium">{event.title}</h4>
+            {getStatusBadge(event.statuss)}
+
+            {event.timeConflict && (
+              <span className="flex items-center gap-0.5 whitespace-nowrap rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
+                <AlertTriangle className="h-3 w-3" /> Retrasado
+              </span>
+            )}
+
+            {event.daysRemaining != null &&
+              event.daysRemaining <= 2 && (
+                <span className="flex items-center gap-0.5 whitespace-nowrap rounded-full bg-orange-100 px-1.5 py-0.5 text-xs text-orange-700">
+                  <Clock className="h-3 w-3" />
+                  {event.daysRemaining < 0
+                    ? `Retrasado ${Math.abs(event.daysRemaining)}d`
+                    : event.daysRemaining === 0
+                    ? "¡Hoy!"
+                    : `${event.daysRemaining}d`}
+                </span>
+              )}
+          </div>
+
+          <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+            <span>{format(event.start, "dd/MM")}</span>
+
+            {event.client && <span>Cliente: {event.client}</span>}
+
+            {event.department && <span>Departamento: {event.department}</span>}
+
+            {event.limit_date && (
+              <span
+                className={`${
+                  event.daysRemaining && event.daysRemaining < 0
+                    ? "font-medium text-red-600"
+                    : ""
+                }`}
+              >
+                Entrega: {format(event.limit_date, "dd/MM")}
+              </span>
+            )}
+
+            {event.estimated_time && (
+              <span>Tiempo: {event.estimated_time}h</span>
+            )}
+          </div>
+
+          {event.expectedStartTime && event.expectedEndTime && (
+            <div className="mt-1 rounded bg-gray-50 px-2 py-1 text-xs">
+              <div className="flex gap-1">
+                <span className="text-gray-500">Estimado:</span>
+                <span className="font-medium">
+                  {format(event.expectedStartTime, "dd/MM HH:mm")} -{" "}
+                  {format(event.expectedEndTime, "dd/MM HH:mm")}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const DeadlineSummary = () => (
+    <div className="mb-4 overflow-hidden rounded-lg border">
+      <div className="border-b bg-gray-50 p-3">
+        <div className="flex items-center">
+          <Clock className="mr-2 h-4 w-4 text-blue-600" />
+          <h3 className="text-sm font-medium text-gray-800">
+            Próximas entregas
+          </h3>
+        </div>
+      </div>
+
+      <div className="divide-y divide-gray-100">
+        {groupedByDeadline.length ? (
+          groupedByDeadline.map((event) => {
+            const colors = getEventColor(event);
+            return (
+              <div
+                key={event.id}
+                className="flex cursor-pointer items-center gap-2 p-3 hover:bg-gray-50"
+                onClick={() => {
+                  setSelectedEvent(event as PrintRequest);
+                  setIsPopupOpen(true);
+                }}
+              >
+                <div
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: colors.border }}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between text-sm">
+                    <h4 className="truncate font-medium">{event.title}</h4>
+                    {event.daysRemaining != null &&
+                      event.daysRemaining <= 2 && (
+                        <span
+                          className={`ml-2 whitespace-nowrap text-xs font-medium ${
+                            event.daysRemaining < 0
+                              ? "text-red-600"
+                              : event.daysRemaining === 0
+                              ? "text-orange-600"
+                              : event.daysRemaining <= 2
+                              ? "text-orange-500"
+                              : "text-blue-600"
+                          }`}
+                        >
+                          {event.daysRemaining < 0
+                            ? `Retrasado (${Math.abs(event.daysRemaining)}d)`
+                            : event.daysRemaining === 0
+                            ? "¡Hoy!"
+                            : `${event.daysRemaining} días`}
+                        </span>
+                      )}
+                  </div>
+                  <div className="mt-0.5 flex justify-between text-xs text-gray-500">
+                    <span>
+                      Entrega:{" "}
+                      {event.limit_date
+                        ? format(event.limit_date, "dd/MM/yyyy")
+                        : "No definida"}
+                    </span>
+                    {event.department && (
+                      <span className="truncate">{event.department}</span>
+                    )}
+                  </div>
+                  {event.timeConflict && (
+                    <div className="mt-1 flex items-center text-xs text-red-600">
+                      <AlertTriangle className="mr-1 h-3 w-3" /> Posible retraso
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="p-4 text-center text-sm text-gray-500">
+            No hay entregas pendientes
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const WorkQueueSummary = () => (
+    <div className="mb-4 overflow-hidden rounded-lg border">
+      <div className="border-b bg-gray-50 p-3">
+        <div className="flex items-center">
+          <Clock className="mr-2 h-4 w-4 text-green-600" />
+          <h3 className="text-sm font-medium text-gray-800">Cola de trabajo</h3>
+        </div>
+      </div>
+
+      <div className="divide-y divide-gray-100">
+        {workQueue.length ? (
+          workQueue.map((event) => (
+            <div
+              key={event.id}
+              className="flex cursor-pointer items-center gap-2 p-3 hover:bg-gray-50"
+              onClick={() => {
+                setSelectedEvent(event as PrintRequest);
+                setIsPopupOpen(true);
+              }}
+            >
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-medium text-green-800">
+                {event.estimated_time}h
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between text-sm">
+                  <h4 className="truncate font-medium">{event.title}</h4>
+                  {getStatusBadge(event.statuss)}
+                </div>
+                <div className="mt-0.5 flex flex-col text-xs text-gray-500">
+                  <span>
+                    Inicio:{" "}
+                    {event.expectedStartTime
+                      ? format(event.expectedStartTime, "dd/MM HH:mm")
+                      : "No definido"}
+                  </span>
+                  <span>
+                    Fin:{" "}
+                    {event.expectedEndTime
+                      ? format(event.expectedEndTime, "dd/MM HH:mm")
+                      : "No definido"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="p-4 text-center text-sm text-gray-500">
+            No hay trabajos en cola
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const validateSelectedDate = (date: Date): boolean => {
+    const day = date.getDay();
+    if (day === 0 || day === 6) {
+      alert("Por favor seleccione un día entre lunes y viernes");
+      return false;
+    }
+    return true;
+  };
+
+  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      startDate: e.target.value,
+    });
+  };
+
+  const handleStartTimeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      startTime: e.target.value,
+    });
+  };
+
+  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      endDate: e.target.value,
+    });
+  };
+
+  const handleEndTimeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      endTime: e.target.value,
+    });
+  };
+
+  const closePopup = () => {
+    setIsPopupOpen(false);
+    setSelectedEvent(null);
+  };
+
+  const getTimeOptions = (date: string) => {
+    const selectedDate = new Date(date);
+    const dayOfWeek = selectedDate.getDay();
+    const options = [];
+    const startHour = 8;
+    const endHour = dayOfWeek === 5 ? 16 : 17; // 4 PM on Friday, 5 PM otherwise
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      options.push(
+        <option key={hour} value={`${hour.toString().padStart(2, '0')}:00`}>
+          {`${hour}:00 ${hour < 12 ? 'AM' : 'PM'}`}
+        </option>
+      );
+    }
+    return options;
+  };
+
+  const handleSaveChanges = async () => {
+    if (!selectedEvent) return;
+
+    const combinedStartDateTime = `${formData.startDate}T${formData.startTime}:00`;
+    const combinedEndDateTime = `${formData.endDate}T${formData.endTime}:00`;
+
+    try {
+      await nextDataStatus(
+        selectedEvent.documentId,
+        selectedEvent.client || "",
+        selectedEvent.statuss,
+        combinedEndDateTime.toString(),
+        combinedStartDateTime.toString(),
+      );
+      setIsPopupOpen(false);
+      // Optionally refresh your data here
+    } catch (error) {
+      console.error('Error updating request:', error);
+      alert('Error al guardar los cambios');
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+      <div className="hidden lg:col-span-1 lg:block">
+        <DeadlineSummary />
+        <WorkQueueSummary />
+        <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 p-3">
+          <h3 className="mb-2 text-sm font-medium text-blue-800">Leyenda</h3>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-red-500"></div>
+              <span className="text-xs text-gray-700">Retrasado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-orange-500"></div>
+              <span className="text-xs text-gray-700">Urgente (0-2 días)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
+              <span className="text-xs text-gray-700">Próximo (3-4 días)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-blue-500"></div>
+              <span className="text-xs text-gray-700">Normal (5+ días)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="lg:col-span-3">
+        <Calendar
+          localizer={momentLocalizer(moment)}
+          events={events}
+          startAccessor="start"
+          endAccessor="end"
+          style={{ height: 700 }}
+          messages={{
+            today: "Hoy",
+            previous: "Anterior",
+            next: "Siguiente",
+            month: "Mes",
+            week: "Semana",
+            day: "Día",
+          }}
+          views={["month", "week", "day", "agenda"]}
+          onView={(view) => setCurrentView(view as CalendarView)}
+          view={currentView}
+          date={currentDate}
+          onNavigate={(date) => setCurrentDate(date)}
+          components={{
+            toolbar: CustomToolbar,
+            agenda: {
+              event: EventAgenda,
+            },
+          }}
+          eventPropGetter={eventStyleGetter}
+          dayPropGetter={highlightWorkingHours}
+          onSelectEvent={(event) => {
+            const eventStart = event.start;
+            const eventEnd = event.end || event.start;
+
+            setSelectedEvent(event as PrintRequest);
+            setFormData({
+              startDate: format(eventStart, 'yyyy-MM-dd'),
+              startTime: format(eventStart, 'HH:mm'),
+              endDate: format(eventEnd, 'yyyy-MM-dd'),
+              endTime: format(eventEnd, 'HH:mm'),
+            });
+            setIsPopupOpen(true);
+          }}
+        />
+      </div>
+
+      {/* Modal de detalles */}
+      {selectedEvent && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setSelectedEvent(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-lg bg-white shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b p-4">
+              <h3 className="font-medium">Detalles del pedido</h3>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="rounded-full p-1 hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 p-4">
+              <div>
+                <h2 className="text-xl font-medium">{selectedEvent.title}</h2>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {getStatusBadge(selectedEvent.statuss)}
+
+                  {selectedEvent.timeConflict && (
+                    <span className="inline-block flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                      <AlertTriangle className="h-3 w-3" /> Conflicto de tiempo
+                    </span>
+                  )}
+
+                  {selectedEvent.daysRemaining != null &&
+                    selectedEvent.daysRemaining <= 2 && (
+                    <span
+                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                        selectedEvent.daysRemaining != null && selectedEvent.daysRemaining < 0
+                          ? "bg-red-100 text-red-700"
+                          : selectedEvent.daysRemaining === 0
+                          ? "bg-orange-100 text-orange-700"
+                          : selectedEvent.daysRemaining <= 2
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-blue-100 text-blue-700"
+                      } flex items-center gap-1`}
+                    >
+                      <Clock className="h-3 w-3" />
+                      {selectedEvent.daysRemaining < 0
+                        ? `¡Vencido hace ${Math.abs(selectedEvent.daysRemaining)} días!`
+                        : selectedEvent.daysRemaining === 0
+                          ? "¡Entrega hoy!"
+                          : `Faltan ${selectedEvent.daysRemaining} días`}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-start gap-2">
+                  <User className="mt-0.5 h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-gray-500">Cliente/Responsable</p>
+                    <p className="font-medium">
+                      {selectedEvent.client || "No especificado"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <CalendarIcon className="mt-0.5 h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-gray-500">Fecha de entrega</p>
+                    <p className="font-medium">
+                      {format(selectedEvent.start, "dd 'de' MMMM 'de' yyyy")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <FileText className="mt-0.5 h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-gray-500">Detalles</p>
+                    <p className="font-medium">
+                      {selectedEvent.details || "No especificado"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <Clock className="mt-0.5 h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-gray-500">Fecha de inicio</p>
+                    <input
+                      type="date"
+                      value={formData.startDate}
+                      onChange={handleStartDateChange}
+                      className="mt-1 rounded border px-2 py-1 text-sm"
+                    />
+                    <select
+                      value={formData.startTime}
+                      onChange={handleStartTimeChange}
+                      className="mt-1 rounded border px-2 py-1 text-sm"
+                    >
+                      {getTimeOptions(formData.startDate)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <Clock className="mt-0.5 h-4 w-4 text-gray-400" />
+                  <div>
+                    <p className="text-gray-500">Fecha de fin</p>
+                    <input
+                      type="date"
+                      value={formData.endDate}
+                      onChange={handleEndDateChange}
+                      className="mt-1 rounded border px-2 py-1 text-sm"
+                    />
+                    <select
+                      value={formData.endTime}
+                      onChange={handleEndTimeChange}
+                      className="mt-1 rounded border px-2 py-1 text-sm"
+                    >
+                      {getTimeOptions(formData.endDate)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={handleSaveChanges}
+                  className="rounded bg-blue-500 px-4 py-2 text-white"
+                >
+                  Guardar cambios
+                </button>
+                <button
+                  onClick={closePopup}
+                  className="rounded border px-4 py-2 text-gray-700"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

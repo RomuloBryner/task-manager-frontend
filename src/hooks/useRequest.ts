@@ -5,7 +5,6 @@ import { getRequests, updateRequest } from "@/utils/api";
 interface RequestAttributes {
   name: string;
   status: string;
-  start_date: string;
   documentId: string;
 }
 
@@ -14,6 +13,8 @@ interface Request {
   responsible: string;
   limit_date: string;
   progress: string;
+  start_date: string;
+  estimated_end_date: string;
   id: number;
   attributes: RequestAttributes;
 }
@@ -39,6 +40,14 @@ export function useRequests() {
 
   const changeStatus = async (documentId: string, newStatus: string) => {
     try {
+      console.log("Updating status for documentId:", documentId, "to:", newStatus);
+      // Set end date if status is "Completed"
+      if (newStatus === "Completed") {
+        const endDate = new Date().toISOString();
+        await updateRequest(documentId, { end_date: endDate });
+      } else {
+        await updateRequest(documentId, { end_date: null });
+      }
       await updateRequest(documentId, { statuss: newStatus });
       setRequests((prev) =>
         prev.map((request: any) =>
@@ -47,7 +56,7 @@ export function useRequests() {
                 ...request,
                 attributes: {
                   ...request.attributes,
-                  statuss: newStatus
+                  statuss: newStatus,
                 }
               }
             : request
@@ -61,9 +70,20 @@ export function useRequests() {
   // responsible: formData.responsible,
   // limit_date: formData.limit_date,
   // progress: formData.progress,
-  const nextDataStatus = async (documentId: string, responsible: string, progress: string) => {
+  const nextDataStatus = async (
+    documentId: string,
+    responsible: string,
+    progress: string,
+    estimated_end_date: string,
+    start_date: string,
+  ) => {
     try {
-      await updateRequest(documentId, { responsible, progress });
+      await updateRequest(documentId, {
+        responsible,
+        progress,
+        estimated_end_date,
+        start_date,
+      });
     } catch (error) {
       console.error("Error updating status:", error);
     }

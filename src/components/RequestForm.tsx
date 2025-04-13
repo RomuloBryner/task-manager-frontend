@@ -10,10 +10,28 @@ interface Field {
   options?: string[];
 }
 
+const departments = [
+  "Select Department",
+  "Project",
+  "VS Biopsy",
+  "VS PPA",
+  "BD Excellence",
+  "Incoming and Supplier Quality",
+  "Environmental Quality",
+  "EHS",
+  "Maintenance and Facilities",
+  "Quality Assurance",
+  "Quality Systems",
+  "Other",
+];
+
 export function RequestForm({ fields }: { fields: Field[] }) {
   const [form, setForm] = useState<any>({
     name: "",
+    global_id: "",
     email: "",
+    department: "",
+    limit_date: "",
     request: {},
   });
 
@@ -24,11 +42,19 @@ export function RequestForm({ fields }: { fields: Field[] }) {
 
   const [formTitle, setFormTitle] = useState("");
   const [formInfo, setFormInfo] = useState("");
+  const [other, setOther] = useState(false);
+  const [otherText, setOtherText] = useState("");
 
   const handleChange = (e: any) => {
     const { name, value, type, files } = e.target;
 
-    if (name === "name" || name === "email" || name === "global_id") {
+    if (
+      name === "name" ||
+      name === "email" ||
+      name === "global_id" ||
+      name === "department" ||
+      name === "limit_date"
+    ) {
       setForm((prev: any) => ({ ...prev, [name]: value }));
     } else {
       setForm((prev: any) => ({
@@ -39,6 +65,26 @@ export function RequestForm({ fields }: { fields: Field[] }) {
         },
       }));
     }
+    console.log(name, value);
+  };
+
+  const handleDepartmentChange = (e: any) => {
+    const value = e.target.value;
+
+    if (value === "Select Department") {
+      setForm((prev: any) => ({ ...prev, department: "" }));
+      return;
+    }
+
+    if (value === "Other") {
+      setOther(true);
+      setForm((prev: any) => ({ ...prev, department: otherText })); // Usar el valor del campo de entrada adicional
+    } else {
+      setOther(false);
+      setForm((prev: any) => ({ ...prev, department: value }));
+    }
+
+    console.log(value);
   };
 
   const uploadFileToStrapi = async (file: File) => {
@@ -53,7 +99,7 @@ export function RequestForm({ fields }: { fields: Field[] }) {
           headers: {
             "Content-Type": "multipart/form-data",
           },
-        }
+        },
       );
       return response.data[0].url;
     } catch (err) {
@@ -88,22 +134,36 @@ export function RequestForm({ fields }: { fields: Field[] }) {
     const dataToSend = {
       data: {
         name: form.name,
-        global_id: "123",
+        global_id: form.global_id,
+        department: form.department,
         email: form.email,
         statuss: "Pending",
         start_date: new Date().toISOString(),
+        limit_date: form.limit_date, // Agregar limit_date
         request: requestData,
-      }
+      },
     };
 
+    console.log("Sending data to Strapi:", dataToSend);
+
     try {
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/requests`, dataToSend);
+      // console.log("Sending data to Strapi:", dataToSend);
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/requests`,
+        dataToSend,
+      );
 
       const result = res.data;
 
       setSubmitted(true);
       setRequestId(result.data.documentId || result.data.id);
-      setForm({ name: "", email: "", request: {} });
+      setForm({
+        name: "",
+        email: "",
+        department: "",
+        limit_date: "",
+        request: {},
+      });
       setError("");
     } catch (err) {
       console.error(err);
@@ -116,7 +176,9 @@ export function RequestForm({ fields }: { fields: Field[] }) {
   useEffect(() => {
     const fetchTitle = async () => {
       try {
-        const response = await axios.get(process.env.NEXT_PUBLIC_API_URL + "/request-body");
+        const response = await axios.get(
+          process.env.NEXT_PUBLIC_API_URL + "/request-body",
+        );
         const { title, info } = response?.data?.data;
         setFormTitle(title);
         setFormInfo(info);
@@ -125,20 +187,7 @@ export function RequestForm({ fields }: { fields: Field[] }) {
       }
     };
 
-    const fetchDepartment = async () => {
-      try {
-        const response = await axios.get(
-          process.env.NEXT_PUBLIC_API_URL + "/department",
-        );
-        const { department } = response?.data?.data;
-        setFormTitle(department);
-      } catch (error) {
-        console.error("Error loading form title:", error);
-      }
-    };
-
     fetchTitle();
-    fetchDepartment();
   }, []);
 
   return (
@@ -208,44 +257,88 @@ export function RequestForm({ fields }: { fields: Field[] }) {
         </div>
       )}
 
-      <label className="mb-1 block font-medium">Requester Information</label>
+      <label className="mb-1 block font-semibold">Requester Information</label>
 
-      <input
-        type="text"
-        name="name"
-        placeholder="Name"
-        value={form.name}
-        onChange={handleChange}
-        className="w-full rounded border px-3 py-2"
-      />
+      <div className="mb-4">
+        <label className="mb-1 block text-sm font-medium">Name</label>
+        <input
+          type="text"
+          name="name"
+          placeholder="Name"
+          value={form.name}
+          onChange={handleChange}
+          className="w-full rounded border px-3 py-2"
+        />
+      </div>
 
-      <input
-        type="text"
-        name="global_id"
-        placeholder="Global ID"
-        value={form.global_id}
-        onChange={handleChange}
-        className="w-full rounded border px-3 py-2"
-      />
+      <div className="mb-4">
+        <label className="mb-1 block text-sm font-medium">Global ID</label>
+        <input
+          type="text"
+          name="global_id"
+          placeholder="Global ID"
+          value={form.global_id}
+          onChange={handleChange}
+          className="w-full rounded border px-3 py-2"
+        />
+      </div>
 
-      <input
-        type="select"
-        name="department"
-        placeholder="Department"
-        value={form.department}
-        onChange={handleChange}
-        className="w-full rounded border px-3 py-2"
-      />
+      <div className="mb-4">
+        <label className="mb-1 block text-sm font-medium">Department</label>
+        <select
+          name="department"
+          value={form.department}
+          onChange={handleDepartmentChange}
+          className="w-full rounded border px-3 py-2"
+        >
+          {departments.map((department) => (
+            <option key={department} value={department}>
+              {department}
+            </option>
+          ))}
+        </select>
+        {other && (
+          <input
+            type="text"
+            name="otherDepartmentInput"
+            value={otherText}
+            onChange={(e) => {
+              setOtherText(e.target.value);
+              setForm((prev: any) => ({ ...prev, department: e.target.value })); // Actualizar el estado del formulario
+            }}
+            placeholder="Specify other department"
+            className="mt-2 w-full rounded border px-3 py-2"
+          />
+        )}
+      </div>
 
-      <input
-        type="email"
-        name="email"
-        placeholder="Email"
-        value={form.email}
-        onChange={handleChange}
-        className="w-full rounded border px-3 py-2 mb-6"
-      />
+      <div className="mb-4">
+        <label className="mb-1 block text-sm font-medium">Email</label>
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={form.email}
+          onChange={handleChange}
+          className="w-full rounded border px-3 py-2"
+        />
+      </div>
 
+      <div className="mb-4">
+        <label className="mb-1 block text-sm font-medium">Limit Date</label>
+        <input
+          type="date"
+          name="limit_date"
+          placeholder="Limit Date"
+          min={new Date().toISOString().split("T")[0]}
+          value={form.request.limit_date}
+          onChange={handleChange}
+          className="w-full rounded border px-3 py-2"
+        />
+      </div>
+      <hr className="my-4 mb-8" />
+
+      <label className="mb-1 block font-semibold">Request Details</label>
       {fields.map((field, idx) => {
         const commonProps = {
           name: field.name,
@@ -256,7 +349,9 @@ export function RequestForm({ fields }: { fields: Field[] }) {
 
         return (
           <div key={idx}>
-            <label className="mb-1 block font-medium">{field.label}</label>
+            <label className="mb-1 block text-sm font-medium">
+              {field.label}
+            </label>
 
             {field.type === "text" && <input type="text" {...commonProps} />}
             {field.type === "textarea" && <textarea {...commonProps} />}

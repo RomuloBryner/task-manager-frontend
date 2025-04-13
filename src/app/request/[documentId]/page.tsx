@@ -35,7 +35,7 @@ export default function RequestDetailPage() {
         const [resRequest, resFields, allRequestsRes] = await Promise.all([
           getRequestById(documentId as string),
           axios.get(`${process.env.NEXT_PUBLIC_API_URL}/request-body`),
-          axios.get(`${process.env.NEXT_PUBLIC_API_URL}/requests?pagination[pageSize]=1000`)
+          axios.get(`${process.env.NEXT_PUBLIC_API_URL}/requests?pagination[pageSize]=1000`),
         ]);
     
         const requestData: any = resRequest;
@@ -46,6 +46,19 @@ export default function RequestDetailPage() {
         const allRequests = allRequestsRes?.data?.data;
 
         const requestsCola = allRequests.filter((r: any) => r.statuss === "Approved");
+
+        requestsCola.sort((a: any, b: any) => {
+          const aStart = new Date(a.start_date).getTime();
+          const bStart = new Date(b.start_date).getTime();
+          if (aStart === bStart) {
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          }
+          return aStart - bStart;
+        });
+
+        // Buscar cuántas están por delante de esta solicitud
+        const currentIndex = requestsCola.findIndex((r: any) => r.documentId === requestData.data.documentId);
+        const requestsAhead = currentIndex + 1; // Porque todas las anteriores en el array están antes y la actual
 
         setPendingRequests(requestsCola);
     
@@ -65,6 +78,7 @@ export default function RequestDetailPage() {
         setRequest((prev: any) => ({
           ...prev,
           visibleId: position,
+          aheadCount: requestsAhead,
         }));
       } catch (err) {
         console.error(err);
@@ -138,14 +152,23 @@ export default function RequestDetailPage() {
             </span>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Requests Ahead:</span>
-            <span className="inline-block rounded-full px-4 py-2 text-sm font-semibold bg-yellow-100 text-yellow-800">{pendingRequests.length}</span>
-          </div>
+          {request.aheadCount > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">Requests Ahead:</span>
+              <span className="inline-block rounded-full bg-yellow-100 px-4 py-2 text-sm font-semibold text-yellow-800">
+                {request.aheadCount}
+              </span>
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <span className="text-gray-600">Requester:</span>
             <span className="font-medium">{request.data.name}</span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600">Department:</span>
+            <span className="font-medium">{request.data.department}</span>
           </div>
 
           <div className="flex items-center justify-between">
@@ -190,7 +213,7 @@ export default function RequestDetailPage() {
 
               <div className="flex w-full flex-col">
                 <span className="mb-2 text-gray-600">Progress:</span>
-                <div className="rounded bg-[#feefc3] p-3 text-left">
+                <div className="rounded h-25 bg-[#feefc3] p-3 text-left">
                   <span className="font-medium">{request.data.progress}</span>
                 </div>
               </div>

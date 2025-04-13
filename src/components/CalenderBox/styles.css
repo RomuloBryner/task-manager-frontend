@@ -1,0 +1,24 @@
+/* Hide times outside working hours in month view */
+.rbc-time-view .rbc-time-content .rbc-time-slot {
+  border-top: 1px solid #f0f0f0;
+}
+
+/* Style for disabled days (weekends) */
+.disabled-day {
+  opacity: 0.5;
+  pointer-events: none;
+  background-color: #f5f5f5;
+}
+
+/* Highlight working hours */
+.rbc-time-view .rbc-time-content .rbc-time-slot.working-hours {
+  background-color: #eafbf0;
+}
+
+/* Hide "all day" section */
+.rbc-time-view .rbc-allday-cell {
+  display: none;
+}
+.rbc-time-view .rbc-time-header-content {
+  margin-top: 0;
+}

@@ -13,6 +13,7 @@
     "axios": "^1.8.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "flatpickr": "^4.6.13",
     "jsvectormap": "^1.6.0",
@@ -22,6 +23,7 @@
     "nextjs-toploader": "^3.7.15",
     "react": "19.0.0",
     "react-apexcharts": "^1.7.0",
+    "react-big-calendar": "^1.18.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "19.0.0",
@@ -30,6 +32,7 @@
   "devDependencies": {
     "@types/node": "^22",
     "@types/react": "19.0.8",
+    "@types/react-big-calendar": "^1.16.1",
     "@types/react-dom": "19.0.3",
     "autoprefixer": "^10.4.20",
     "eslint": "^9",

@@ -1,18 +1,15 @@
-import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
-// import CalendarBox from "@/components/CalenderBox";
-import { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Calender Page",
-  // other metadata
-};
+import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
+import { RequestsCalendar } from "@/components/CalenderBox";
+import { Metadata } from "next";
 
 const CalendarPage = () => {
   return (
     <>
       <Breadcrumb pageName="Calendar" />
 
-      {/* <CalendarBox /> */}
+      <RequestsCalendar />
     </>
   );
 };

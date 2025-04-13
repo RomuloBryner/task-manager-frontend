@@ -1,6 +1,7 @@
 "use client";
 import { RequestsTable } from "@/components/SolicitudesTable";
 import Link from "next/link";
+import Breadcrumb from "@/components/Breadcrumbs/Breadcrumb";
 
 type PropsType = {
   searchParams: Promise<{
@@ -21,6 +22,7 @@ export default function Home() {
 
   return (
     <>
+      <Breadcrumb pageName="Requests" />
       <div className="flex flex-col items-start justify-center gap-4">
         {/* Copy Create Request Link Button */}
         <button
