@@ -655,14 +655,12 @@ export function RequestsCalendar() {
 
     const buildISO = (date: string, time: string) => {
       if (!date || !time) return null;
-
-      // Asegurar que el time tenga el formato correcto HH:mm
-      const parts = time.split(":");
-      const hour = parts[0]?.padStart(2, "0") || "00";
-      const minutes = parts[1]?.padStart(2, "0") || "00";
-
-      return `${date}T${hour}:${minutes}:00`;
-    };
+    
+      const iso = moment(`${date} ${time}`, "YYYY-MM-DD HH:mm")
+        .format(); // Esto incluye tu zona local automáticamente
+    
+      return iso;
+    };    
 
     const combinedStartDateTime = buildISO(startDate, startTime);
     const combinedEndDateTime = buildISO(endDate, endTime);
