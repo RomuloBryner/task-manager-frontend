@@ -168,11 +168,11 @@ export function RequestForm({
         name: form.name,
         global_id: form.global_id,
         department: form.department,
-        email: form.email,
+        email: form.email || "noemail@gmail.com",
         statuss: "Pending",
         start_date: new Date().toISOString(),
-        limit_date: form.limit_date,
-        additional_info: form.additional_info,
+        limit_date: form.limit_date || "not provided",
+        additional_info: form.additional_info || "not provided",
         request: requestData,
       },
     };
@@ -343,7 +343,7 @@ export function RequestForm({
         )}
       </div>
 
-      <div className="mb-4">
+      {/* <div className="mb-4">
         <label className="mb-1 block text-sm font-medium">Email</label>
         <input
           type="email"
@@ -353,7 +353,7 @@ export function RequestForm({
           onChange={handleChange}
           className="w-full rounded border px-3 py-2"
         />
-      </div>
+      </div> */}
 
       <hr className="my-4 mb-8" />
 
@@ -467,7 +467,7 @@ export function RequestForm({
 
       <div>
         <label htmlFor="additional_info" className="mb-1 block text-sm font-medium">
-          Additional Information
+          Additional Information:
         </label>
         <textarea
           name="additional_info"

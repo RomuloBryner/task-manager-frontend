@@ -261,7 +261,7 @@ export default function RequestDetailPage() {
               })}
               <div className="col-span-2">
                 <h3 className="mb-1 font-medium text-gray-700">
-                  Additional Information
+                  Additional Information:
                 </h3>
                 <p className="text-gray-600">{request.data.additional_info}</p>
               </div>
