@@ -656,10 +656,12 @@ export function RequestsCalendar() {
     const buildISO = (date: string, time: string) => {
       if (!date || !time) return null;
     
-      const iso = moment(`${date} ${time}`, "YYYY-MM-DD HH:mm")
-        .format(); // Esto incluye tu zona local automáticamente
+      const parts = time.split(":");
+      const hour = parts[0]?.padStart(2, "0") || "00";
+      const minutes = parts[1]?.padStart(2, "0") || "00";
     
-      return iso;
+      // Aplica timezone de República Dominicana (-04:00)
+      return `${date}T${hour}:${minutes}:00-04:00`;
     };    
 
     const combinedStartDateTime = buildISO(startDate, startTime);
