@@ -39,6 +39,7 @@ export function RequestForm({
     email: "",
     department: "",
     limit_date: "",
+    additional_info: "",
     request: {},
   });
 
@@ -62,7 +63,8 @@ export function RequestForm({
       name === "email" ||
       name === "global_id" ||
       name === "department" ||
-      name === "limit_date"
+      name === "limit_date" ||
+      name === "additional_info"
     ) {
       setForm((prev: any) => ({ ...prev, [name]: value }));
     } else {
@@ -170,6 +172,7 @@ export function RequestForm({
         statuss: "Pending",
         start_date: new Date().toISOString(),
         limit_date: form.limit_date,
+        additional_info: form.additional_info,
         request: requestData,
       },
     };
@@ -189,6 +192,7 @@ export function RequestForm({
         email: "",
         department: "",
         limit_date: "",
+        additional_info: "",
         request: {},
       });
       setError("");
@@ -351,18 +355,6 @@ export function RequestForm({
         />
       </div>
 
-      <div className="mb-4">
-        <label className="mb-1 block text-sm font-medium">Limit Date</label>
-        <input
-          type="date"
-          name="limit_date"
-          placeholder="Limit Date"
-          min={new Date().toISOString().split("T")[0]}
-          value={form.limit_date}
-          onChange={handleChange}
-          className="w-full rounded border px-3 py-2"
-        />
-      </div>
       <hr className="my-4 mb-8" />
 
       <label className="mb-1 block font-semibold">Request Details</label>
@@ -459,6 +451,31 @@ export function RequestForm({
           </div>
         );
       })}
+
+      <div className="mb-4">
+        <label className="mb-1 block text-sm font-medium">Expected delivery date:</label>
+        <input
+          type="date"
+          name="limit_date"
+          placeholder="Limit Date"
+          min={new Date().toISOString().split("T")[0]}
+          value={form.limit_date}
+          onChange={handleChange}
+          className="w-full rounded border px-3 py-2"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="additional_info" className="mb-1 block text-sm font-medium">
+          Additional Information
+        </label>
+        <textarea
+          name="additional_info"
+          value={form.additional_info}
+          onChange={handleChange}
+          className="w-full rounded border px-3 py-2"
+        />
+      </div>
 
       <button
         type="submit"

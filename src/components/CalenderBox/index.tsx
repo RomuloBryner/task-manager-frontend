@@ -40,6 +40,7 @@ interface PrintRequest {
   limit_date?: Date | null;
   client?: string;
   details?: any;
+  additional_info?: string;
   daysRemaining?: number | null;
   department?: string;
   estimated_time?: number;
@@ -134,6 +135,7 @@ export function RequestsCalendar() {
         global_id: req.global_id,
         email: req.email,
         createdAt: req.createdAt ? parseISO(req.createdAt) : new Date(),
+        additional_info: req.additional_info || "",
       } as PrintRequest;
     });
 
@@ -427,7 +429,7 @@ export function RequestsCalendar() {
                     : ""
                 }`}
               >
-                Entrega limite: {format(event.limit_date, "dd/MM")}
+                Entrega esperada: {format(event.limit_date, "dd/MM")}
               </span>
             )}
 
@@ -508,7 +510,7 @@ export function RequestsCalendar() {
                   </div>
                   <div className="mt-0.5 flex justify-between text-xs text-gray-500">
                     <span>
-                      Entrega limite:{" "}
+                      Entrega esperada:{" "}
                       {event.limit_date
                         ? format(event.limit_date, "dd/MM/yyyy")
                         : "No definida"}
@@ -866,6 +868,10 @@ export function RequestsCalendar() {
                         No especificado
                       </p>
                     )}
+                    <strong>Información adicional:</strong>
+                    <p className="font-medium text-gray-500">
+                      {selectedEvent.additional_info || "No especificado"}
+                    </p>
                   </div>
                 </div>
               </div>

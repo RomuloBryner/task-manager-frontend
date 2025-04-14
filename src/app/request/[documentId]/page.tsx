@@ -201,7 +201,7 @@ export default function RequestDetailPage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Limit Date:</span>
+                <span className="text-gray-600">Expected delivery date:</span>
                 <span className="font-medium">
                   {new Date(request.data.limit_date).toLocaleString("en-US", {
                     timeZone: "America/Santo_Domingo",
@@ -259,6 +259,12 @@ export default function RequestDetailPage() {
                   </div>
                 );
               })}
+              <div className="col-span-2">
+                <h3 className="mb-1 font-medium text-gray-700">
+                  Additional Information
+                </h3>
+                <p className="text-gray-600">{request.data.additional_info}</p>
+              </div>
             </div>
           </div>
         </div>
