@@ -25,7 +25,14 @@ const departments = [
   "Other",
 ];
 
-export function RequestForm({ fields }: { fields: Field[] }) {
+// Añadimos el prop isEditMode que por defecto es false para formulario de cliente
+export function RequestForm({
+  fields,
+  isEditMode = false,
+}: {
+  fields: Field[];
+  isEditMode?: boolean;
+}) {
   const [form, setForm] = useState<any>({
     name: "",
     global_id: "",
@@ -42,8 +49,10 @@ export function RequestForm({ fields }: { fields: Field[] }) {
 
   const [formTitle, setFormTitle] = useState("");
   const [formInfo, setFormInfo] = useState("");
-  const [other, setOther] = useState(false);
-  const [otherText, setOtherText] = useState("");
+  const [otherDepartment, setOtherDepartment] = useState(false);
+  const [otherDepartmentText, setOtherDepartmentText] = useState("");
+  const [otherSelect, setOtherSelect] = useState<string | null>(null);
+  const [otherSelectText, setOtherSelectText] = useState("");
 
   const handleChange = (e: any) => {
     const { name, value, type, files } = e.target;
@@ -65,7 +74,6 @@ export function RequestForm({ fields }: { fields: Field[] }) {
         },
       }));
     }
-    console.log(name, value);
   };
 
   const handleDepartmentChange = (e: any) => {
@@ -77,14 +85,37 @@ export function RequestForm({ fields }: { fields: Field[] }) {
     }
 
     if (value === "Other") {
-      setOther(true);
-      setForm((prev: any) => ({ ...prev, department: otherText })); // Usar el valor del campo de entrada adicional
+      setOtherDepartment(true);
+      setForm((prev: any) => ({ ...prev, department: otherDepartmentText }));
     } else {
-      setOther(false);
+      setOtherDepartment(false);
       setForm((prev: any) => ({ ...prev, department: value }));
     }
+  };
 
-    console.log(value);
+  const handleSelectChange = (e: any, fieldName: string) => {
+    const value = e.target.value;
+
+    if (value === "__other__") {
+      setOtherSelect(fieldName);
+      setForm((prev: any) => ({
+        ...prev,
+        request: {
+          ...prev.request,
+          [fieldName]: "",
+        },
+      }));
+      setOtherSelectText("");
+    } else {
+      setOtherSelect(null);
+      setForm((prev: any) => ({
+        ...prev,
+        request: {
+          ...prev.request,
+          [fieldName]: value,
+        },
+      }));
+    }
   };
 
   const uploadFileToStrapi = async (file: File) => {
@@ -113,7 +144,6 @@ export function RequestForm({ fields }: { fields: Field[] }) {
     setLoading(true);
 
     const requestData: any = {};
-
     for (const field of fields) {
       const value = form.request[field.name];
 
@@ -139,15 +169,12 @@ export function RequestForm({ fields }: { fields: Field[] }) {
         email: form.email,
         statuss: "Pending",
         start_date: new Date().toISOString(),
-        limit_date: form.limit_date, // Agregar limit_date
+        limit_date: form.limit_date,
         request: requestData,
       },
     };
 
-    console.log("Sending data to Strapi:", dataToSend);
-
     try {
-      // console.log("Sending data to Strapi:", dataToSend);
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/requests`,
         dataToSend,
@@ -297,14 +324,14 @@ export function RequestForm({ fields }: { fields: Field[] }) {
             </option>
           ))}
         </select>
-        {other && (
+        {otherDepartment && (
           <input
             type="text"
             name="otherDepartmentInput"
-            value={otherText}
+            value={otherDepartmentText}
             onChange={(e) => {
-              setOtherText(e.target.value);
-              setForm((prev: any) => ({ ...prev, department: e.target.value })); // Actualizar el estado del formulario
+              setOtherDepartmentText(e.target.value);
+              setForm((prev: any) => ({ ...prev, department: e.target.value }));
             }}
             placeholder="Specify other department"
             className="mt-2 w-full rounded border px-3 py-2"
@@ -331,7 +358,7 @@ export function RequestForm({ fields }: { fields: Field[] }) {
           name="limit_date"
           placeholder="Limit Date"
           min={new Date().toISOString().split("T")[0]}
-          value={form.request.limit_date}
+          value={form.limit_date}
           onChange={handleChange}
           className="w-full rounded border px-3 py-2"
         />
@@ -365,19 +392,48 @@ export function RequestForm({ fields }: { fields: Field[] }) {
               />
             )}
             {field.type === "select" && (
-              <select {...commonProps}>
-                <option value="">Select an option</option>
-                {field.options?.map((opt: string, i: number) => (
-                  <option key={i} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <select
+                  name={field.name}
+                  value={form.request[field.name] || ""}
+                  onChange={(e) => handleSelectChange(e, field.name)}
+                  className="w-full rounded border px-3 py-2"
+                >
+                  <option value="">Select an option</option>
+                  {field.options?.map((opt: string, i: number) => (
+                    <option key={i} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                  <option value="__other__">Other</option>
+                </select>
+
+                {otherSelect === field.name && (
+                  <input
+                    type="text"
+                    placeholder="Specify other option"
+                    value={otherSelectText}
+                    onChange={(e) => {
+                      setOtherSelectText(e.target.value);
+                      setForm((prev: any) => ({
+                        ...prev,
+                        request: {
+                          ...prev.request,
+                          [field.name]: e.target.value,
+                        },
+                      }));
+                    }}
+                    className="mt-2 w-full rounded border px-3 py-2"
+                  />
+                )}
+              </div>
             )}
+
             {field.type === "multiselect" && (
               <select
                 name={field.name}
                 multiple
+                value={form.request[field.name] || []}
                 onChange={(e) => {
                   const selected = Array.from(
                     e.target.selectedOptions,

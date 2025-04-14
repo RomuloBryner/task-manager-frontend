@@ -10,6 +10,7 @@ import {
   startOfWeek,
   endOfWeek,
   addDays,
+  differenceInHours,
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { useRequests } from "@/hooks/useRequest";
@@ -26,8 +27,8 @@ import {
   Calendar as CalendarIcon,
   AlertTriangle,
 } from "lucide-react";
-import moment from 'moment';
-import { momentLocalizer } from 'react-big-calendar';
+import moment from "moment";
+import { momentLocalizer } from "react-big-calendar";
 
 interface PrintRequest {
   id: string;
@@ -38,14 +39,14 @@ interface PrintRequest {
   end: Date | null;
   limit_date?: Date | null;
   client?: string;
-  details?: string;
+  details?: any;
   daysRemaining?: number | null;
   department?: string;
   estimated_time?: number;
   global_id?: string;
   email?: string;
   expectedStartTime?: Date;
-  expectedEndTime?: Date;
+  estimated_end_date?: Date;
   timeConflict?: boolean;
   createdAt?: Date;
 }
@@ -59,10 +60,10 @@ export function RequestsCalendar() {
   const [currentView, setCurrentView] = useState<CalendarView>("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [formData, setFormData] = useState({
-    startDate: '',
-    startTime: '',
-    endDate: '',
-    endTime: ''
+    startDate: "",
+    startTime: "",
+    endDate: "",
+    endTime: "",
   });
 
   // Horas laborales
@@ -101,30 +102,35 @@ export function RequestsCalendar() {
     const today = new Date();
 
     let mappedRequests = requests.map((req: any) => {
+      // Usar start_date para la fecha de inicio
       const start = req.start_date ? parseISO(req.start_date) : new Date();
-      const end = req.end_date
-        ? parseISO(req.end_date)
-        : new Date(start.getTime() + 60 * 60 * 1000);
+
+      // Manejar limit_date
       const limit_date = req.limit_date ? parseISO(req.limit_date) : null;
+
+      // Calcular días restantes hasta la fecha límite
       const daysRemaining = limit_date
         ? differenceInDays(limit_date, today)
         : null;
+
+      // Calcular horas en base a la fecha inicial y la fecha estimated_end_date
+      const estimated_time = differenceInHours(req.estimated_end_date, start);
 
       return {
         id: req.id,
         documentId: req.documentId || "",
         title: req.name || "Sin título",
-        statuss: req.statuss || "Pending",
+        // Usar statuss si existe, si no, usa progress
+        statuss: req.statuss,
         start,
-        end,
+        estimated_end_date: req.estimated_end_date ? parseISO(req.estimated_end_date) : new Date(),
+        end: null, // No se usa en este contexto
         limit_date,
-        client: req.responsible,
-        details: req.requestObject
-          ? JSON.stringify(req.requestObject)
-          : undefined,
+        client: req.responsible || "",
+        details: req.request || undefined,
         daysRemaining,
-        department: req.department,
-        estimated_time: req.estimated_time || 1, // Default a 1 hora si no está especificado
+        department: req.department || "",
+        estimated_time,
         global_id: req.global_id,
         email: req.email,
         createdAt: req.createdAt ? parseISO(req.createdAt) : new Date(),
@@ -135,113 +141,32 @@ export function RequestsCalendar() {
       (a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0)
     );
 
-    let currentWorkTime = new Date();
-    const currentHour = currentWorkTime.getHours();
-    const currentDay = currentWorkTime.getDay();
-
-    if (
-      currentHour < WORK_START_HOUR ||
-      (currentDay === 5 && currentHour >= WORK_END_HOUR_FRIDAY) ||
-      (currentDay !== 5 && currentHour >= WORK_END_HOUR_WEEKDAY) ||
-      currentDay === 0 ||
-      currentDay === 6
-    ) {
-      currentWorkTime.setHours(WORK_START_HOUR, 0, 0, 0);
-
-      if (currentDay === 0) {
-        currentWorkTime.setDate(currentWorkTime.getDate() + 1);
-      } else if (currentDay === 6) {
-        currentWorkTime.setDate(currentWorkTime.getDate() + 2);
-      } else if (
-        currentHour >=
-        (currentDay === 5 ? WORK_END_HOUR_FRIDAY : WORK_END_HOUR_WEEKDAY)
-      ) {
-        currentWorkTime.setDate(currentWorkTime.getDate() + 1);
-        if (currentWorkTime.getDay() === 6) {
-          currentWorkTime.setDate(currentWorkTime.getDate() + 2);
-        }
-      }
-    }
-
-    const activeRequests = mappedRequests.filter((req) =>
-      ["approved", "in progress", "pending"].includes(req.statuss.toLowerCase())
-    );
+    // Considerar las solicitudes activas
+    const activeRequests = mappedRequests.filter((req) => {
+      const status = req.statuss.toLowerCase();
+      return ["approved", "pending"].includes(status) && status !== "cancelled";
+    });
 
     activeRequests.forEach((req) => {
-      let workStart = new Date(currentWorkTime);
-      if (workStart.getHours() < WORK_START_HOUR) {
-        workStart.setHours(WORK_START_HOUR, 0, 0, 0);
-      } else if (
-        (workStart.getDay() === 5 &&
-          workStart.getHours() >= WORK_END_HOUR_FRIDAY) ||
-        (workStart.getDay() !== 5 &&
-          workStart.getHours() >= WORK_END_HOUR_WEEKDAY) ||
-        workStart.getDay() === 0 ||
-        workStart.getDay() === 6
+      // Asignar directamente la fecha de inicio como el tiempo estimado de inicio
+      req.expectedStartTime = req.start;
+
+      // Calcular la fecha estimada de finalización sumando el tiempo desde la fecha de inicio hasta el tiempo estimado de finalización
+      const estimatedEndTime = new Date(req.start?.getTime());
+      estimatedEndTime.setHours(
+        estimatedEndTime.getHours() + (req.estimated_time || 1),
+      );
+
+      req.estimated_end_date = req.estimated_end_date;
+
+      // Verificar si hay conflicto con la fecha límite
+      if (
+        req.limit_date &&
+        req.estimated_end_date &&
+        isAfter(req.estimated_end_date, req.limit_date)
       ) {
-        workStart.setDate(workStart.getDate() + 1);
-        if (workStart.getDay() === 6) {
-          workStart.setDate(workStart.getDate() + 2);
-        } else if (workStart.getDay() === 0) {
-          workStart.setDate(workStart.getDate() + 1);
-        }
-        workStart.setHours(WORK_START_HOUR, 0, 0, 0);
-      }
-
-      req.expectedStartTime = new Date(workStart);
-
-      const totalHours = req.estimated_time || 1;
-      const workHoursPerDay =
-        workStart.getDay() === 5
-          ? WORK_END_HOUR_FRIDAY - WORK_START_HOUR
-          : WORK_END_HOUR_WEEKDAY - WORK_START_HOUR;
-
-      const fullDays = Math.floor(totalHours / workHoursPerDay);
-      const remainingHours = totalHours % workHoursPerDay;
-
-      let expectedEndTime = new Date(workStart);
-
-      if (fullDays > 0) {
-        for (let i = 0; i < fullDays; i++) {
-          expectedEndTime.setDate(expectedEndTime.getDate() + 1);
-          if (expectedEndTime.getDay() === 6) {
-            expectedEndTime.setDate(expectedEndTime.getDate() + 2);
-          } else if (expectedEndTime.getDay() === 0) {
-            expectedEndTime.setDate(expectedEndTime.getDate() + 1);
-          }
-        }
-      }
-
-      let endHour = expectedEndTime.getHours() + remainingHours;
-      const workEndHour =
-        expectedEndTime.getDay() === 5
-          ? WORK_END_HOUR_FRIDAY
-          : WORK_END_HOUR_WEEKDAY;
-
-      if (endHour >= workEndHour) {
-        expectedEndTime.setDate(expectedEndTime.getDate() + 1);
-        if (expectedEndTime.getDay() === 6) {
-          expectedEndTime.setDate(expectedEndTime.getDate() + 2);
-        } else if (expectedEndTime.getDay() === 0) {
-          expectedEndTime.setDate(expectedEndTime.getDate() + 1);
-        }
-        expectedEndTime.setHours(
-          WORK_START_HOUR + (endHour - workEndHour),
-          expectedEndTime.getMinutes(),
-          0,
-          0
-        );
-      } else {
-        expectedEndTime.setHours(endHour, expectedEndTime.getMinutes(), 0, 0);
-      }
-
-      req.expectedEndTime = new Date(expectedEndTime);
-
-      if (req.limit_date && isAfter(req.expectedEndTime, req.limit_date)) {
         req.timeConflict = true;
       }
-
-      currentWorkTime = new Date(expectedEndTime);
     });
 
     return mappedRequests;
@@ -250,8 +175,11 @@ export function RequestsCalendar() {
   const groupedByDeadline = useMemo(() => {
     if (!events.length) return [];
 
+    // Actualizado para excluir específicamente estado 'cancelled'
     const activeEvents = events.filter(
-      (e) => e.statuss.toLowerCase() !== "approved"
+      (e) =>
+        e.statuss.toLowerCase() === "in process" &&
+        e.statuss.toLowerCase() !== "cancelled"
     );
 
     return activeEvents
@@ -265,9 +193,10 @@ export function RequestsCalendar() {
   const workQueue = useMemo(() => {
     if (!events.length) return [];
 
-    const activeEvents = events.filter((e) =>
-      ["approved", "in progress", "pending"].includes(e.statuss.toLowerCase())
-    );
+    const activeEvents = events.filter((e) => {
+      const status = e.statuss.toLowerCase();
+      return ["approved", "pending"].includes(status) && status !== "cancelled";
+    });
 
     return activeEvents
       .sort((a, b) => {
@@ -300,7 +229,10 @@ export function RequestsCalendar() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
+    // Aseguramos que status es una cadena y la convertimos a minúsculas
+    const statusLower = String(status).toLowerCase();
+
+    switch (statusLower) {
       case "pending":
         return (
           <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
@@ -341,6 +273,21 @@ export function RequestsCalendar() {
   };
 
   const eventStyleGetter = (event: PrintRequest) => {
+    // Estados cancelados aparecen en gris
+    if (event.statuss.toLowerCase() === "cancelled") {
+      return {
+        style: {
+          backgroundColor: "#f3f4f6",
+          borderLeft: "3px solid #9ca3af",
+          color: "#6b7280",
+          borderRadius: "4px",
+          padding: "2px 8px",
+          fontSize: "13px",
+          textDecoration: "line-through",
+        },
+      };
+    }
+
     const colors = getEventColor(event);
     return {
       style: {
@@ -480,7 +427,7 @@ export function RequestsCalendar() {
                     : ""
                 }`}
               >
-                Entrega: {format(event.limit_date, "dd/MM")}
+                Entrega limite: {format(event.limit_date, "dd/MM")}
               </span>
             )}
 
@@ -489,13 +436,13 @@ export function RequestsCalendar() {
             )}
           </div>
 
-          {event.expectedStartTime && event.expectedEndTime && (
+          {event.expectedStartTime && event.estimated_end_date && (
             <div className="mt-1 rounded bg-gray-50 px-2 py-1 text-xs">
               <div className="flex gap-1">
                 <span className="text-gray-500">Estimado:</span>
                 <span className="font-medium">
                   {format(event.expectedStartTime, "dd/MM HH:mm")} -{" "}
-                  {format(event.expectedEndTime, "dd/MM HH:mm")}
+                  {format(event.estimated_end_date, "dd/MM HH:mm")}
                 </span>
               </div>
             </div>
@@ -553,13 +500,15 @@ export function RequestsCalendar() {
                             ? `Retrasado (${Math.abs(event.daysRemaining)}d)`
                             : event.daysRemaining === 0
                             ? "¡Hoy!"
-                            : `${event.daysRemaining} días`}
+                            : (event.daysRemaining === 1
+                              ? "1 día"
+                              : `${event.daysRemaining} días`)}
                         </span>
                       )}
                   </div>
                   <div className="mt-0.5 flex justify-between text-xs text-gray-500">
                     <span>
-                      Entrega:{" "}
+                      Entrega limite:{" "}
                       {event.limit_date
                         ? format(event.limit_date, "dd/MM/yyyy")
                         : "No definida"}
@@ -623,8 +572,8 @@ export function RequestsCalendar() {
                   </span>
                   <span>
                     Fin:{" "}
-                    {event.expectedEndTime
-                      ? format(event.expectedEndTime, "dd/MM HH:mm")
+                    {event.estimated_end_date
+                      ? format(event.estimated_end_date, "dd/MM HH:mm")
                       : "No definido"}
                   </span>
                 </div>
@@ -702,22 +651,45 @@ export function RequestsCalendar() {
   const handleSaveChanges = async () => {
     if (!selectedEvent) return;
 
-    const combinedStartDateTime = `${formData.startDate}T${formData.startTime}:00`;
-    const combinedEndDateTime = `${formData.endDate}T${formData.endTime}:00`;
+    const { startDate, startTime, endDate, endTime } = formData;
+
+    const buildISO = (date: string, time: string) => {
+      if (!date || !time) return null;
+
+      // Asegurar que el time tenga el formato correcto HH:mm
+      const parts = time.split(":");
+      const hour = parts[0]?.padStart(2, "0") || "00";
+      const minutes = parts[1]?.padStart(2, "0") || "00";
+
+      return `${date}T${hour}:${minutes}:00`;
+    };
+
+    const combinedStartDateTime = buildISO(startDate, startTime);
+    const combinedEndDateTime = buildISO(endDate, endTime);
+
+    console.log("combinedStartDateTime:", combinedStartDateTime);
+    console.log("combinedEndDateTime:", combinedEndDateTime);
+
+    if (!combinedStartDateTime || !combinedEndDateTime) {
+      alert("Por favor completa todas las fechas y horas antes de continuar.");
+      return;
+    }
 
     try {
       await nextDataStatus(
         selectedEvent.documentId,
         selectedEvent.client || "",
         selectedEvent.statuss,
-        combinedEndDateTime.toString(),
-        combinedStartDateTime.toString(),
-      );
+        combinedEndDateTime,
+        combinedStartDateTime
+      ).then(() => {
+        window.location.reload();
+      });
       setIsPopupOpen(false);
       // Optionally refresh your data here
     } catch (error) {
-      console.error('Error updating request:', error);
-      alert('Error al guardar los cambios');
+      console.error("Error updating request:", error);
+      alert("Error al guardar los cambios");
     }
   };
 
@@ -754,8 +726,10 @@ export function RequestsCalendar() {
           localizer={momentLocalizer(moment)}
           events={events}
           startAccessor="start"
-          endAccessor="end"
+          endAccessor="estimated_end_date"
           style={{ height: 700 }}
+          min={new Date(2023, 0, 1, 8, 0)} // Establecer la hora mínima a las 8 AM
+          max={new Date(2023, 0, 1, 18, 0)} // Establecer la hora máxima a las 5 PM
           messages={{
             today: "Hoy",
             previous: "Anterior",
@@ -783,10 +757,10 @@ export function RequestsCalendar() {
 
             setSelectedEvent(event as PrintRequest);
             setFormData({
-              startDate: format(eventStart, 'yyyy-MM-dd'),
-              startTime: format(eventStart, 'HH:mm'),
-              endDate: format(eventEnd, 'yyyy-MM-dd'),
-              endTime: format(eventEnd, 'HH:mm'),
+              startDate: format(eventStart, "yyyy-MM-dd"),
+              startTime: format(eventStart, "HH:mm"),
+              endDate: format(eventEnd, "yyyy-MM-dd"),
+              endTime: format(eventEnd, "HH:mm"),
             });
             setIsPopupOpen(true);
           }}
@@ -820,32 +794,33 @@ export function RequestsCalendar() {
                   {getStatusBadge(selectedEvent.statuss)}
 
                   {selectedEvent.timeConflict && (
-                    <span className="inline-block flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                    <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
                       <AlertTriangle className="h-3 w-3" /> Conflicto de tiempo
                     </span>
                   )}
 
                   {selectedEvent.daysRemaining != null &&
                     selectedEvent.daysRemaining <= 2 && (
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                        selectedEvent.daysRemaining != null && selectedEvent.daysRemaining < 0
-                          ? "bg-red-100 text-red-700"
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                          selectedEvent.daysRemaining != null &&
+                          selectedEvent.daysRemaining < 0
+                            ? "bg-red-100 text-red-700"
+                            : selectedEvent.daysRemaining === 0
+                              ? "bg-orange-100 text-orange-700"
+                              : selectedEvent.daysRemaining <= 2
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-blue-100 text-blue-700"
+                        } flex items-center gap-1`}
+                      >
+                        <Clock className="h-3 w-3" />
+                        {selectedEvent.daysRemaining < 0
+                          ? `¡Vencido hace ${Math.abs(selectedEvent.daysRemaining)} días!`
                           : selectedEvent.daysRemaining === 0
-                          ? "bg-orange-100 text-orange-700"
-                          : selectedEvent.daysRemaining <= 2
-                            ? "bg-orange-100 text-orange-700"
-                            : "bg-blue-100 text-blue-700"
-                      } flex items-center gap-1`}
-                    >
-                      <Clock className="h-3 w-3" />
-                      {selectedEvent.daysRemaining < 0
-                        ? `¡Vencido hace ${Math.abs(selectedEvent.daysRemaining)} días!`
-                        : selectedEvent.daysRemaining === 0
-                          ? "¡Entrega hoy!"
-                          : `Faltan ${selectedEvent.daysRemaining} días`}
-                    </span>
-                  )}
+                            ? "¡Entrega hoy!"
+                            : `Faltan ${selectedEvent.daysRemaining} días`}
+                      </span>
+                    )}
                 </div>
               </div>
 
@@ -874,12 +849,28 @@ export function RequestsCalendar() {
                   <FileText className="mt-0.5 h-4 w-4 text-gray-400" />
                   <div>
                     <p className="text-gray-500">Detalles</p>
-                    <p className="font-medium">
-                      {selectedEvent.details || "No especificado"}
-                    </p>
+
+                    {selectedEvent.details ? (
+                      <ul className="space-y-1">
+                        {Object.entries(selectedEvent.details).map(
+                          ([key, value]) => (
+                            <li key={key}>
+                              <strong className="capitalize">{key}:</strong>{" "}
+                              {String(value)}
+                            </li>
+                          ),
+                        )}
+                      </ul>
+                    ) : (
+                      <p className="font-medium text-gray-500">
+                        No especificado
+                      </p>
+                    )}
                   </div>
                 </div>
-
+              </div>
+              <hr />
+              <div className="pb-6 flex items-center justify-end gap-4">
                 <div className="flex items-start gap-2">
                   <Clock className="mt-0.5 h-4 w-4 text-gray-400" />
                   <div>
@@ -942,4 +933,3 @@ export function RequestsCalendar() {
     </div>
   );
 }
-

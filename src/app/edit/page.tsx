@@ -186,16 +186,44 @@ const FieldItem = ({
       {(field.type === "select" || field.type === "multiselect") && (
         <div>
           <label className="block text-sm font-medium mb-1">Options</label>
-          <div className="flex items-start">
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              {field.options?.map((option, optionIndex) => (
+                <div key={optionIndex} className="flex items-center bg-gray-100 rounded-full px-3 py-1">
+                  <span>{option}</span>
+                  <button
+                    onClick={() => {
+                      const updatedOptions = field.options?.filter((_, i) => i !== optionIndex) || [];
+                      handleFieldChange(index, "options", updatedOptions);
+                    }}
+                    className="ml-2 text-red-500 hover:text-red-700"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
             <input
               type="text"
-              value={field.options?.join(", ") || ""}
-              onChange={(e) => handleFieldChange(index, "options", e.target.value)}
+              placeholder="Type option and press Enter"
               className="w-full border rounded px-3 py-2"
-              placeholder="Option 1, Option 2, Option 3"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const input = e.currentTarget;
+                  const newOption = input.value;
+                  if (newOption.trim()) {
+                    const currentOptions = field.options || [];
+                    if (!currentOptions.includes(newOption)) {
+                      handleFieldChange(index, "options", [...currentOptions, newOption]);
+                      input.value = "";
+                    }
+                  }
+                }
+              }}
             />
+            <p className="text-xs text-gray-500">Press Enter to add each option</p>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Separate options with commas</p>
         </div>
       )}
     </div>
@@ -226,9 +254,15 @@ export default function EditPage() {
   const handleFieldChange = (index: number, key: keyof Field, value: any) => {
     const updated = [...fields];
     if (key === "options") {
-      (updated[index][key] as string[]) = value.split(",").map((opt: string) => opt.trim());
+      // Si value ya es un array, úsalo directamente
+      if (Array.isArray(value)) {
+        updated[index][key] = value;
+      } else {
+        // Si es string, divídelo por comas (mantener para compatibilidad)
+        updated[index][key] = value.split(",").map((opt: string) => opt.trim());
+      }
     } else {
-      (updated[index][key] as string) = value;
+      (updated[index] as any)[key] = value;
     }
     setFields(updated);
   };
