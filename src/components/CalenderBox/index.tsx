@@ -1,6 +1,7 @@
 "use client";
 
-import { Calendar } from "react-big-calendar";
+import "./styles.css";
+import { Calendar, Week } from "react-big-calendar";
 import {
   parseISO,
   format,
@@ -82,8 +83,8 @@ export function RequestsCalendar() {
       dayOfWeek >= 1 && dayOfWeek <= 4
         ? hour >= WORK_START_HOUR && hour < WORK_END_HOUR_WEEKDAY
         : dayOfWeek === 5
-        ? hour >= WORK_START_HOUR && hour < WORK_END_HOUR_FRIDAY
-        : false;
+          ? hour >= WORK_START_HOUR && hour < WORK_END_HOUR_FRIDAY
+          : false;
 
     if (isWorkingDay && isWorkingHour) {
       return {
@@ -94,6 +95,17 @@ export function RequestsCalendar() {
     }
 
     return {};
+  };
+
+  const CustomWeekView = (props: any) => {
+    const filteredProps = {
+      ...props,
+      dateRange: props.dateRange.filter((date: Date) => {
+        const day = date.getDay();
+        return day >= 1 && day <= 5; // Lunes a Viernes
+      }),
+    };
+    return <Week {...filteredProps} />;
   };
 
   // Convertir los datos de solicitudes en eventos para el calendario
@@ -109,13 +121,49 @@ export function RequestsCalendar() {
       // Manejar limit_date
       const limit_date = req.limit_date ? parseISO(req.limit_date) : null;
 
-      // Calcular días restantes hasta la fecha límite
-      const daysRemaining = limit_date
-        ? differenceInDays(limit_date, today)
-        : null;
-
       // Calcular horas en base a la fecha inicial y la fecha estimated_end_date
-      const estimated_time = differenceInHours(req.estimated_end_date, start);
+      function calculateWorkingHours(startDate: Date, endDate: Date): number {
+        let totalHours = 0;
+        let current = new Date(startDate);
+
+        while (current < endDate) {
+          const day = current.getDay(); // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
+          const hour = current.getHours();
+
+          // Saltar fines de semana
+          if (day === 0 || day === 6) {
+            current.setDate(current.getDate() + 1);
+            current.setHours(9, 0, 0, 0);
+            continue;
+          }
+
+          // Establecer hora de finalización laboral según el día
+          const workStart = 9;
+          const workEnd = day === 5 ? 16 : 17; // Viernes termina a las 4 PM
+
+          // Si la hora actual está dentro del horario laboral
+          if (hour >= workStart && hour < workEnd) {
+            const nextHour = new Date(current);
+            nextHour.setHours(current.getHours() + 1);
+
+            if (nextHour <= endDate) {
+              totalHours += 1;
+            } else {
+              break; // salimos si el próximo bloque de 1h se sale del rango
+            }
+          }
+
+          // Avanza una hora
+          current.setHours(current.getHours() + 1);
+        }
+
+        return totalHours;
+      }
+
+      const estimated_time = calculateWorkingHours(
+        start,
+        req.estimated_end_date ? parseISO(req.estimated_end_date) : start,
+      );
 
       return {
         id: req.id,
@@ -124,12 +172,14 @@ export function RequestsCalendar() {
         // Usar statuss si existe, si no, usa progress
         statuss: req.statuss,
         start,
-        estimated_end_date: req.estimated_end_date ? parseISO(req.estimated_end_date) : new Date(),
+        estimated_end_date: req.estimated_end_date
+          ? parseISO(req.estimated_end_date)
+          : new Date(),
         end: null, // No se usa en este contexto
         limit_date,
         client: req.responsible || "",
         details: req.request || undefined,
-        daysRemaining,
+        daysRemaining: limit_date ? differenceInDays(limit_date, today) : null,
         department: req.department || "",
         estimated_time,
         global_id: req.global_id,
@@ -140,7 +190,7 @@ export function RequestsCalendar() {
     });
 
     mappedRequests.sort(
-      (a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0)
+      (a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0),
     );
 
     // Considerar las solicitudes activas
@@ -181,7 +231,7 @@ export function RequestsCalendar() {
     const activeEvents = events.filter(
       (e) =>
         e.statuss.toLowerCase() === "in process" &&
-        e.statuss.toLowerCase() !== "cancelled"
+        e.statuss.toLowerCase() !== "cancelled",
     );
 
     return activeEvents
@@ -336,11 +386,11 @@ export function RequestsCalendar() {
           {view === "month"
             ? format(date, "MMMM yyyy")
             : view === "week"
-            ? `${format(startOfWeek(date), "d MMM")} - ${format(
-                endOfWeek(date),
-                "d MMM"
-              )}`
-            : format(date, "EEEE, d MMMM")}
+              ? `${format(startOfWeek(date), "d MMM")} - ${format(
+                  endOfWeek(date),
+                  "d MMM",
+                )}`
+              : format(date, "EEEE, d MMMM")}
         </h2>
       </div>
 
@@ -348,7 +398,9 @@ export function RequestsCalendar() {
         <button
           onClick={() => onView("month")}
           className={`rounded-lg px-3 py-1.5 text-sm ${
-            view === "month" ? "bg-blue-600 text-white" : "bg-gray-100 hover:bg-gray-200"
+            view === "month"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 hover:bg-gray-200"
           }`}
         >
           Mes
@@ -356,7 +408,9 @@ export function RequestsCalendar() {
         <button
           onClick={() => onView("week")}
           className={`rounded-lg px-3 py-1.5 text-sm ${
-            view === "week" ? "bg-blue-600 text-white" : "bg-gray-100 hover:bg-gray-200"
+            view === "week"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 hover:bg-gray-200"
           }`}
         >
           Semana
@@ -364,7 +418,9 @@ export function RequestsCalendar() {
         <button
           onClick={() => onView("day")}
           className={`rounded-lg px-3 py-1.5 text-sm ${
-            view === "day" ? "bg-blue-600 text-white" : "bg-gray-100 hover:bg-gray-200"
+            view === "day"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 hover:bg-gray-200"
           }`}
         >
           Día
@@ -372,7 +428,9 @@ export function RequestsCalendar() {
         <button
           onClick={() => onView("agenda")}
           className={`rounded-lg px-3 py-1.5 text-sm ${
-            view === "agenda" ? "bg-blue-600 text-white" : "bg-gray-100 hover:bg-gray-200"
+            view === "agenda"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 hover:bg-gray-200"
           }`}
         >
           Lista
@@ -401,17 +459,16 @@ export function RequestsCalendar() {
               </span>
             )}
 
-            {event.daysRemaining != null &&
-              event.daysRemaining <= 2 && (
-                <span className="flex items-center gap-0.5 whitespace-nowrap rounded-full bg-orange-100 px-1.5 py-0.5 text-xs text-orange-700">
-                  <Clock className="h-3 w-3" />
-                  {event.daysRemaining < 0
-                    ? `Retrasado ${Math.abs(event.daysRemaining)}d`
-                    : event.daysRemaining === 0
+            {event.daysRemaining != null && event.daysRemaining <= 2 && (
+              <span className="flex items-center gap-0.5 whitespace-nowrap rounded-full bg-orange-100 px-1.5 py-0.5 text-xs text-orange-700">
+                <Clock className="h-3 w-3" />
+                {event.daysRemaining < 0
+                  ? `Retrasado ${Math.abs(event.daysRemaining)}d`
+                  : event.daysRemaining === 0
                     ? "¡Hoy!"
                     : `${event.daysRemaining}d`}
-                </span>
-              )}
+              </span>
+            )}
           </div>
 
           <div className="mt-0.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
@@ -433,9 +490,11 @@ export function RequestsCalendar() {
               </span>
             )}
 
-            {event.estimated_time && (
-              <span>Tiempo: {event.estimated_time}h</span>
-            )}
+            {/* Mostrar estimated_time solo si el estado es "approved" */}
+            {event.statuss.toLowerCase() === "approved" &&
+              event.estimated_time && (
+                <span>Tiempo estimado: {event.estimated_time}h</span>
+              )}
           </div>
 
           {event.expectedStartTime && event.estimated_end_date && (
@@ -474,7 +533,16 @@ export function RequestsCalendar() {
                 key={event.id}
                 className="flex cursor-pointer items-center gap-2 p-3 hover:bg-gray-50"
                 onClick={() => {
+                  const eventStart = event.start;
+                  const eventEnd = event.estimated_end_date || event.start;
+
                   setSelectedEvent(event as PrintRequest);
+                  setFormData({
+                    startDate: format(eventStart, "yyyy-MM-dd"),
+                    startTime: format(eventStart, "HH:mm"),
+                    endDate: format(eventEnd, "yyyy-MM-dd"),
+                    endTime: format(eventEnd, "HH:mm"),
+                  });
                   setIsPopupOpen(true);
                 }}
               >
@@ -492,19 +560,19 @@ export function RequestsCalendar() {
                             event.daysRemaining < 0
                               ? "text-red-600"
                               : event.daysRemaining === 0
-                              ? "text-orange-600"
-                              : event.daysRemaining <= 2
-                              ? "text-orange-500"
-                              : "text-blue-600"
+                                ? "text-orange-600"
+                                : event.daysRemaining <= 2
+                                  ? "text-orange-500"
+                                  : "text-blue-600"
                           }`}
                         >
                           {event.daysRemaining < 0
                             ? `Retrasado (${Math.abs(event.daysRemaining)}d)`
                             : event.daysRemaining === 0
-                            ? "¡Hoy!"
-                            : (event.daysRemaining === 1
-                              ? "1 día"
-                              : `${event.daysRemaining} días`)}
+                              ? "¡Hoy!"
+                              : event.daysRemaining === 1
+                                ? "1 día"
+                                : `${event.daysRemaining} días`}
                         </span>
                       )}
                   </div>
@@ -515,10 +583,17 @@ export function RequestsCalendar() {
                         ? format(event.limit_date, "dd/MM/yyyy")
                         : "No definida"}
                     </span>
-                    {event.department && (
-                      <span className="truncate">{event.department}</span>
-                    )}
+                    <span className="flex items-center gap-1 truncate">
+                      {event.department && <span>{event.department}</span>}
+                      {event.statuss.toLowerCase() !== "pending" &&
+                        event.estimated_time && (
+                          <span className="font-medium text-green-700">
+                            · {event.estimated_time}h
+                          </span>
+                        )}
+                    </span>
                   </div>
+
                   {event.timeConflict && (
                     <div className="mt-1 flex items-center text-xs text-red-600">
                       <AlertTriangle className="mr-1 h-3 w-3" /> Posible retraso
@@ -553,13 +628,24 @@ export function RequestsCalendar() {
               key={event.id}
               className="flex cursor-pointer items-center gap-2 p-3 hover:bg-gray-50"
               onClick={() => {
+                const eventStart = event.start;
+                const eventEnd = event.estimated_end_date || event.start;
+
                 setSelectedEvent(event as PrintRequest);
+                setFormData({
+                  startDate: format(eventStart, "yyyy-MM-dd"),
+                  startTime: format(eventStart, "HH:mm"),
+                  endDate: format(eventEnd, "yyyy-MM-dd"),
+                  endTime: format(eventEnd, "HH:mm"),
+                });
                 setIsPopupOpen(true);
               }}
             >
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-medium text-green-800">
-                {event.estimated_time}h
-              </div>
+              {event.statuss !== "Pending" && (
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs font-medium text-green-800">
+                  {event.estimated_time}h
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between text-sm">
                   <h4 className="truncate font-medium">{event.title}</h4>
@@ -572,6 +658,12 @@ export function RequestsCalendar() {
                       ? format(event.expectedStartTime, "dd/MM HH:mm")
                       : "No definido"}
                   </span>
+                  {event.statuss.toLowerCase() !== "pending" &&
+                    event.estimated_time && (
+                      <span className="font-medium text-green-700">
+                        Tiempo estimado: {event.estimated_time}h
+                      </span>
+                    )}
                   <span>
                     Fin:{" "}
                     {event.estimated_end_date
@@ -638,17 +730,18 @@ export function RequestsCalendar() {
     const dayOfWeek = selectedDate.getDay();
     const options = [];
     const startHour = 8;
-    const endHour = dayOfWeek === 5 ? 16 : 17; // 4 PM on Friday, 5 PM otherwise
-
-    for (let hour = startHour; hour < endHour; hour++) {
+    const endHour = 17; // 4 PM on Friday, 5 PM otherwise
+  
+    for (let hour = startHour; hour < endHour + 1 ; hour++) {
       options.push(
-        <option key={hour} value={`${hour.toString().padStart(2, '0')}:00`}>
-          {`${hour}:00 ${hour < 12 ? 'AM' : 'PM'}`}
+        <option key={hour} value={`${hour.toString().padStart(2, "0")}:00`}>
+          {`${hour}:00 ${hour < 12 ? "AM" : "PM"}`}
         </option>
       );
     }
     return options;
   };
+  
 
   const handleSaveChanges = async () => {
     if (!selectedEvent) return;
@@ -657,14 +750,14 @@ export function RequestsCalendar() {
 
     const buildISO = (date: string, time: string) => {
       if (!date || !time) return null;
-    
+
       const parts = time.split(":");
       const hour = parts[0]?.padStart(2, "0") || "00";
       const minutes = parts[1]?.padStart(2, "0") || "00";
-    
+
       // Aplica timezone de República Dominicana (-04:00)
       return `${date}T${hour}:${minutes}:00-04:00`;
-    };    
+    };
 
     const combinedStartDateTime = buildISO(startDate, startTime);
     const combinedEndDateTime = buildISO(endDate, endTime);
@@ -683,7 +776,7 @@ export function RequestsCalendar() {
         selectedEvent.client || "",
         selectedEvent.statuss,
         combinedEndDateTime,
-        combinedStartDateTime
+        combinedStartDateTime,
       ).then(() => {
         window.location.reload();
       });
@@ -755,7 +848,7 @@ export function RequestsCalendar() {
           dayPropGetter={highlightWorkingHours}
           onSelectEvent={(event) => {
             const eventStart = event.start;
-            const eventEnd = event.end || event.start;
+            const eventEnd = event.estimated_end_date || event.start;
 
             setSelectedEvent(event as PrintRequest);
             setFormData({
@@ -876,7 +969,7 @@ export function RequestsCalendar() {
                 </div>
               </div>
               <hr />
-              <div className="pb-6 flex items-center justify-end gap-4">
+              <div className="flex items-center justify-end gap-4 pb-6">
                 <div className="flex items-start gap-2">
                   <Clock className="mt-0.5 h-4 w-4 text-gray-400" />
                   <div>
@@ -939,3 +1032,4 @@ export function RequestsCalendar() {
     </div>
   );
 }
+

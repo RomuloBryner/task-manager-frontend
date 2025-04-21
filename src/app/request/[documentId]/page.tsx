@@ -264,6 +264,16 @@ export default function RequestDetailPage() {
                   Additional Information:
                 </h3>
                 <p className="text-gray-600">{request.data.additional_info}</p>
+                <p className="text-gray-600">{request.data?.request && typeof request.data.request === 'object' && (
+                  <div className="mt-4">
+                    {Object.entries(request.data.request).map(([key, value]) => (
+                      <div key={key} className="mb-2">
+                        <span className="font-medium">{key}: </span>
+                        <span>{Array.isArray(value) ? value.join(', ') : String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}</p>                
               </div>
             </div>
           </div>

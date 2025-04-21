@@ -12,8 +12,12 @@ export default function RequestPage() {
     const fetchBody = async () => {
       try {
         const response = await axios.get(process.env.NEXT_PUBLIC_API_URL + "/request-body");
-        const fields = response.data?.data?.request;
-        setRequestBody(fields);
+        const forms = await axios.get(
+          process.env.NEXT_PUBLIC_API_URL + "/request-forms",
+        );
+        const fields = forms.data?.data;
+        console.log(fields[1].request);
+        setRequestBody(fields[1].request);
       } catch (error) {
         console.error("Error loading form body:", error);
       }

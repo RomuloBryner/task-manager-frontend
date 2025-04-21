@@ -15,6 +15,7 @@ interface Request {
   progress: string;
   start_date: string;
   estimated_end_date: string;
+  cancel_info: string;
   id: number;
   attributes: RequestAttributes;
 }

@@ -3,8 +3,22 @@
   border-top: 1px solid #f0f0f0;
 }
 
-/* Style for disabled days (weekends) */
-.disabled-day {
+/* Hide weekends in month view */
+.rbc-month-view .rbc-weekend {
+  opacity: 0.5;
+  pointer-events: none;
+  background-color: #f5f5f5;
+}
+
+/* Disable weekend slots in week view */
+.rbc-time-view .rbc-time-header-cell.rbc-weekend {
+  opacity: 0.5;
+  pointer-events: none;
+  background-color: #f5f5f5;
+}
+
+/* Hide weekend time slots */
+.rbc-time-view .rbc-time-content .rbc-day-slot.rbc-weekend {
   opacity: 0.5;
   pointer-events: none;
   background-color: #f5f5f5;
@@ -22,3 +36,4 @@
 .rbc-time-view .rbc-time-header-content {
   margin-top: 0;
 }
+

@@ -39,6 +39,7 @@ export function RequestsTable({ className }: { className?: string }) {
     startTime: "",
     endDate: "",
     endTime: "",
+    cancelReason: "",
   });
   const [requestDetails, setRequestDetails] = useState<any>(null);
   const [fields, setFields] = useState<any[]>([]);
@@ -90,6 +91,7 @@ export function RequestsTable({ className }: { className?: string }) {
       startTime: request?.start_date?.split('T')[1]?.slice(0, 5) || "",
       endDate: request?.estimated_end_date?.split('T')[0] || "",
       endTime: request?.estimated_end_date?.split('T')[1]?.slice(0, 5) || "",
+      cancelReason: request?.cancel_info || "",
     });
     setUpdateModalOpen(true);
   };
@@ -117,6 +119,7 @@ export function RequestsTable({ className }: { className?: string }) {
       startTime: "",
       endDate: "",
       endTime: "",
+      cancelReason: "",
     });
     setRequestDetails(null);
     setFields([]);
@@ -182,7 +185,12 @@ export function RequestsTable({ className }: { className?: string }) {
     if (currentRequest) {
       setLoadingStatus(true);
       try {
-        await changeStatus(currentRequest.toString(), "Cancelled");
+        await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/requests/${currentRequest}`, {
+          data: {  // Añadido el objeto data requerido
+            statuss: "Cancelled",
+            cancel_info: formData.cancelReason,
+          }
+        });
         setLocalStatuses(prev => ({
           ...prev,
           [currentRequest]: "Cancelled"
@@ -195,6 +203,7 @@ export function RequestsTable({ className }: { className?: string }) {
       }
     }
   };
+  
 
   const getStatusBadge = (status: string) => {
     const base = "inline-block rounded-full px-3 py-1 text-sm font-semibold";
@@ -237,6 +246,7 @@ export function RequestsTable({ className }: { className?: string }) {
       startTime: currentRequestLimitDate?.split('T')[1]?.slice(0, 5) || "",
       endDate: currentRequestLimitDate?.split('T')[0] || "",
       endTime: currentRequestLimitDate?.split('T')[1]?.slice(0, 5) || "",
+      cancelReason: "",
     });
     setAcceptModalOpen(true);
   };
@@ -674,29 +684,40 @@ export function RequestsTable({ className }: { className?: string }) {
         </div>
       )}
 
-      {cancelModalOpen && (
-        <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded bg-white p-6 shadow-lg">
-            <h3 className="mb-4 text-lg font-semibold">Cancel Request</h3>
-            <p>Are you sure you want to cancel this request?</p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                onClick={closeModal}
-                className="rounded bg-gray-200 px-4 py-2 hover:bg-gray-300"
-              >
-                No
-              </button>
-              <button
-                onClick={handleCancelRequest}
-                className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-                disabled={loadingStatus}
-              >
-                {loadingStatus ? "Canceling..." : "Yes"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+{cancelModalOpen && (
+  <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/50">
+    <div className="w-full max-w-md rounded bg-white p-6 shadow-lg">
+      <h3 className="mb-4 text-lg font-semibold">Cancel Request</h3>
+      <p>Are you sure you want to cancel this request?</p>
+      <div className="mt-4">
+        <label className="mb-1 block text-sm font-medium">Reason for Cancellation</label>
+        <textarea
+          rows={3}
+          value={formData.cancelReason}
+          onChange={(e) => setFormData({ ...formData, cancelReason: e.target.value })}
+          className="w-full rounded border px-3 py-2"
+          placeholder="Please provide a reason for cancellation"
+        />
+      </div>
+      <div className="mt-4 flex justify-end gap-2">
+        <button
+          onClick={closeModal}
+          className="rounded bg-gray-200 px-4 py-2 hover:bg-gray-300"
+        >
+          No
+        </button>
+        <button
+          onClick={handleCancelRequest}
+          className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+          disabled={loadingStatus}
+        >
+          {loadingStatus ? "Canceling..." : "Yes"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
       {acceptModalOpen && (
         <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/50">

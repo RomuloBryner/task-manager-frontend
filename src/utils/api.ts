@@ -48,3 +48,8 @@ export const getRequestsCountBeforeDate = async (date: string) => {
   return response.data;
 };
 
+export const getRequestForms = async () => {
+  const response = await axios.get(`${API_URL}/request-forms?populate=*`);
+  console.log("ok");
+  return response.data;
+};
