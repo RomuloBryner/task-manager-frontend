@@ -40,6 +40,7 @@ export function RequestForm({
     department: "",
     limit_date: "",
     additional_info: "",
+    request_type: "",
     request: {},
   });
 
@@ -175,6 +176,7 @@ export function RequestForm({
         start_date: new Date().toISOString(),
         limit_date: form.limit_date || "not provided",
         additional_info: form.additional_info || "not provided",
+        request_type: form.request_type,
         request: requestData,
       },
     };
@@ -195,6 +197,7 @@ export function RequestForm({
         department: "",
         limit_date: "",
         additional_info: "",
+        request_type: "",
         request: {},
       });
       setError("");
@@ -216,6 +219,7 @@ export function RequestForm({
       setFields(formData.request || []);
       setFormTitle(formData.title);
       setFormInfo(formData.info);
+      setForm((prev: any) => ({ ...prev, request_type: selectedFormId }));
     } catch (error) {
       console.error("Error loading form details:", error);
     }
@@ -386,7 +390,7 @@ export function RequestForm({
       </div>
 
       <div className="mb-4">
-        <label className="mb-1 block text-sm font-medium">Request Type</label>
+        <label className="mb-1 block text-sm font-medium">Request Type <br/><small className={`${form.request_type != "" && "hidden"}`} style={{ color: "red" }}>Select your request type</small></label>
         <select
           name="request_type"
           value={form.request_type}
